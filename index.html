@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小兒外科麻醉導航 Pediatric Surgery Anesthesia Navigator</title>
+<style>
+  /* ===== CSS Reset & Variables ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* 主色系：#87a5d6（鋼藍）、#5c5953（暖灰褐）階調推導 */
+    --bg:           #edf1f8;   /* #87a5d6 極淡 */
+    --surface:      #ffffff;
+    --surface2:     #f3f6fb;   /* #87a5d6 淡 */
+    --border:       #c4d3e8;   /* #87a5d6 淺 */
+    --text:         #3a3835;   /* #5c5953 深 */
+    --text-sub:     #6e6a65;   /* #5c5953 中 */
+    --primary:      #87a5d6;   /* 鋼藍主色 */
+    --primary-light:#e6edf8;   /* #87a5d6 極淡背景 */
+    --green:        #3d6b9a;   /* #87a5d6 深藍，用於成功/確認 */
+    --green-bg:     #dce8f5;
+    --yellow:       #7a6830;   /* 暖琥珀，保留警示語意 */
+    --yellow-bg:    #f7f2e2;
+    --orange:       #b84d00;   /* 保留橘色語意警示 */
+    --orange-bg:    #fff0e6;
+    --red:          #c0392b;   /* 保留紅色危險語意 */
+    --red-bg:       #fdecea;
+    --accent:       #87a5d6;   /* 同主色，card 邊框 accent */
+    --accent2:      #d3d2c9;   /* 暖灰，副 accent */
+    --dark:         #5c5953;   /* 暖灰褐，header / 強調深色 */
+    --dark-light:   #8a847e;   /* #5c5953 中亮 */
+    --radius: 10px;
+    --shadow:    0 2px 8px  rgba(92,89,83,0.09);
+    --shadow-lg: 0 4px 16px rgba(92,89,83,0.13);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ===== Header ===== */
+  header {
+    background: var(--dark);
+    color: #fff;
+    padding: 18px 20px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(92,89,83,0.28);
+    border-bottom: 3px solid var(--primary);
+  }
+  .header-top { display: flex; align-items: center; gap: 12px; }
+  .header-logo {
+    height: 36px;
+    width: auto;
+    flex-shrink: 0;
+    opacity: 0.9;
+    filter: brightness(0) invert(1);
+  }
+  .header-text { flex: 1; min-width: 0; }
+  header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em; }
+  header p { font-size: 0.78rem; opacity: 0.82; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 14px; border-radius: 6px; border: none;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-white { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
+  .btn-white:hover { background: rgba(255,255,255,0.28); }
+  .btn-danger { background: #c0392b; color: #fff; }
+  .btn-danger:hover { background: #a93226; }
+
+  /* ===== Layout ===== */
+  .container { max-width: 960px; margin: 0 auto; padding: 16px 12px 40px; }
+
+  /* ===== Disclaimer Banner ===== */
+  .disclaimer {
+    background: #f0f4fb;
+    border: 1.5px solid var(--accent2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: var(--dark);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-header h2 {
+    font-size: 0.9rem; font-weight: 700; color: var(--primary);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .card-header .toggle-icon { font-size: 0.75rem; color: var(--text-sub); transition: transform 0.2s; }
+  .card-header.collapsed .toggle-icon { transform: rotate(-90deg); }
+  .card-body { padding: 16px; }
+  .card-body.hidden { display: none; }
+
+  /* ===== Form Elements ===== */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 0.82rem; font-weight: 600; color: var(--text-sub); }
+  select, input[type="number"] {
+    padding: 9px 11px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--surface);
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border 0.15s;
+    width: 100%;
+  }
+  select:focus, input[type="number"]:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(135,165,214,0.22);
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a6780' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
+
+  /* ===== Checkboxes ===== */
+  .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 6px; }
+  .checkbox-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    font-size: 0.84rem;
+    transition: background 0.12s, border-color 0.12s;
+    user-select: none;
+  }
+  .checkbox-item:hover { background: var(--primary-light); border-color: var(--primary); }
+  .checkbox-item input[type="checkbox"] { accent-color: var(--dark); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+  .checkbox-item.checked { background: var(--primary-light); border-color: var(--primary); font-weight: 600; }
+  .checkbox-item.risk-high { border-color: #e8a090; }
+  .checkbox-item.risk-high.checked { background: var(--red-bg); border-color: var(--red); }
+
+  /* ===== Risk Badge ===== */
+  .risk-overview {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .risk-overview.risk-low { background: var(--green-bg); border-color: #5cb88a; }
+  .risk-overview.risk-medium { background: var(--yellow-bg); border-color: #f0c030; }
+  .risk-overview.risk-high { background: var(--orange-bg); border-color: #e07030; }
+  .risk-overview.risk-extreme { background: var(--red-bg); border-color: var(--red); }
+  .risk-badge {
+    font-size: 1.25rem; font-weight: 800; padding: 6px 18px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .risk-low .risk-badge { background: var(--green); color: #fff; }
+  .risk-medium .risk-badge { background: #d4a000; color: #fff; }
+  .risk-high .risk-badge { background: var(--orange); color: #fff; }
+  .risk-extreme .risk-badge { background: var(--red); color: #fff; }
+  .risk-desc { font-size: 0.88rem; flex: 1; }
+
+  /* ===== Result Lists ===== */
+  .result-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .result-list li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 11px;
+    background: var(--surface2);
+    border-radius: 7px;
+    font-size: 0.87rem;
+    border-left: 3px solid var(--border);
+  }
+  .result-list li.warn { border-left-color: var(--orange); background: var(--orange-bg); }
+  .result-list li.alert { border-left-color: var(--red); background: var(--red-bg); font-weight: 600; }
+  .result-list li.info { border-left-color: var(--primary); background: var(--primary-light); }
+  .result-list li.ok { border-left-color: var(--green); background: var(--green-bg); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; margin-top: 6px; }
+
+  /* ===== Drug Table ===== */
+  .drug-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .drug-table th { background: var(--dark); color: var(--accent2); padding: 8px 10px; text-align: left; font-weight: 600; }
+  .drug-table th:first-child { border-radius: 7px 0 0 0; }
+  .drug-table th:last-child { border-radius: 0 7px 0 0; }
+  .drug-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .drug-table tr:nth-child(4n+3) td { background: var(--surface2); }
+  .drug-table tr:last-child td { border-bottom: none; }
+  .drug-detail-row td { padding: 0 !important; border-top: none !important; background: var(--surface) !important; }
+  .drug-table .dose-result { font-weight: 700; color: var(--dark); }
+  .drug-note {
+    margin-top: 10px; padding: 9px 12px;
+    background: var(--yellow-bg); border: 1px solid #f0c030;
+    border-radius: 7px; font-size: 0.78rem; color: var(--yellow); font-weight: 500;
+  }
+
+  /* ===== ETT Box ===== */
+  .ett-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 10px; }
+  .ett-item {
+    background: var(--primary-light);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 11px 13px;
+    text-align: center;
+  }
+  .ett-item .ett-label { font-size: 0.76rem; color: var(--text-sub); margin-bottom: 3px; }
+  .ett-item .ett-value { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
+  .ett-item .ett-unit { font-size: 0.75rem; color: var(--text-sub); }
+
+  /* ===== Fluid Box ===== */
+  .fluid-box {
+    background: var(--primary-light); border: 1.5px solid var(--primary);
+    border-radius: 9px; padding: 14px 16px;
+  }
+  .fluid-rate { font-size: 1.5rem; font-weight: 800; color: var(--dark); }
+  .fluid-breakdown { font-size: 0.82rem; color: #2e7d5a; margin-top: 4px; }
+
+  /* ===== Checklist ===== */
+  .checklist { display: flex; flex-direction: column; gap: 5px; }
+  .check-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 11px; border-radius: 7px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem; cursor: pointer;
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .check-item:hover { background: var(--surface2); }
+  .check-item input[type="checkbox"] { accent-color: var(--dark); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+  .check-item.done { text-decoration: line-through; color: var(--text-sub); background: var(--primary-light); border-color: var(--primary); }
+  .check-item.priority { border-left: 3px solid var(--red); }
+
+  /* ===== Disease Card ===== */
+  .disease-card {
+    background: var(--surface);
+    border: 2px solid var(--primary);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .disease-card-header { background: var(--dark); color: var(--accent2); padding: 10px 14px; font-weight: 700; font-size: 0.92rem; }
+  .disease-card-body { padding: 12px 14px; }
+  .disease-point {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .disease-point:last-child { border-bottom: none; }
+  .disease-point .tag {
+    font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .tag-red { background: var(--red-bg); color: var(--red); }
+  .tag-orange { background: var(--orange-bg); color: var(--orange); }
+  .tag-blue { background: var(--primary-light); color: var(--primary); }
+  .tag-green { background: var(--green-bg); color: var(--green); }
+
+  /* ===== Monitoring Grid ===== */
+  .monitor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 7px; }
+  .monitor-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 11px; border-radius: 7px;
+    background: var(--surface2); border: 1px solid var(--border);
+    font-size: 0.83rem;
+  }
+  .monitor-item.critical { background: var(--red-bg); border-color: #e08080; font-weight: 600; color: var(--red); }
+  .monitor-item.important { background: var(--orange-bg); border-color: #e8a070; }
+  .monitor-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: var(--green); }
+  .dot-orange { background: var(--orange); }
+  .dot-red { background: var(--red); }
+  .dot-blue { background: var(--primary); }
+
+  /* ===== Drug Note Dropdown ===== */
+  .drug-note-details { display: block; }
+  .drug-note-details summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-light);
+    border: 1px solid var(--accent2);
+    border-radius: 5px;
+    padding: 3px 9px;
+    white-space: nowrap;
+    user-select: none;
+    transition: background 0.12s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .drug-note-details summary::-webkit-details-marker { display: none; }
+  .drug-note-details summary::after {
+    content: "▾";
+    font-size: 0.65rem;
+    transition: transform 0.15s;
+  }
+  .drug-note-details[open] summary::after { transform: rotate(180deg); }
+  .drug-note-details summary:hover { background: var(--border); }
+  .drug-note-details[open] summary {
+    background: var(--dark);
+    color: var(--accent2);
+    border-color: var(--dark);
+  }
+  /* 展開內容：跨欄顯示於下一列 */
+  .drug-note-text {
+    margin-top: 0;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: var(--text-sub);
+  }
+  .drug-note-dose-line {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 5px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .drug-note-dose-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ===== Empty State ===== */
+  .empty-state { text-align: center; padding: 24px 16px; color: var(--text-sub); font-size: 0.85rem; }
+
+  /* ===== Section Divider ===== */
+  .section-title {
+    font-size: 0.75rem; font-weight: 700; color: var(--text-sub);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 14px 0 7px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+
+  /* ===== Footer ===== */
+  footer { text-align: center; padding: 20px 16px; font-size: 0.76rem; color: var(--text-sub); }
+
+  /* ===== Drug Calculator Modal ===== */
+  #drug-calc-fab {
+    position: fixed; bottom: 22px; right: 18px; z-index: 200;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: var(--dark); color: var(--accent2);
+    border: none; font-size: 1rem; font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(92,89,83,0.32);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0;
+  }
+  #drug-calc-fab:hover { background: #4a4641; transform: scale(1.07); }
+  #drug-calc-fab:active { transform: scale(0.95); }
+  /* tooltip label */
+  #drug-calc-fab::after {
+    content: "藥物計算機";
+    position: absolute;
+    right: 58px;
+    white-space: nowrap;
+    background: var(--dark);
+    color: var(--accent2);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  #drug-calc-fab:hover::after { opacity: 1; }
+
+  /* Modal overlay */
+  #drug-calc-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  #drug-calc-modal.open { display: flex; }
+
+  #drug-calc-frame-wrap {
+    width: min(480px, 100vw);
+    height: 100dvh;
+    max-height: 100dvh;
+    background: #1e2a35;
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  @media (min-width: 540px) {
+    #drug-calc-frame-wrap {
+      width: 420px;
+      height: min(820px, 95dvh);
+      border-radius: 16px;
+    }
+  }
+
+  #drug-calc-close {
+    position: absolute; top: 10px; right: 12px; z-index: 10;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); color: #fff;
+    border: none; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  #drug-calc-close:hover { background: rgba(255,255,255,0.28); }
+
+  #drug-calc-iframe {
+    width: 100%; flex: 1; border: none;
+    background: #f2f5f8;
+  }
+
+  /* ===== Floating Calculator ===== */
+  #calc-fab {
+    position: fixed; bottom: 22px; right: 76px; z-index: 200;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    border: none; font-size: 1.3rem; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(135,165,214,0.35);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+  }
+  #calc-fab:hover { background: #6b8dbf; transform: scale(1.07); }
+  #calc-fab:active { transform: scale(0.95); }
+
+  #calc-panel {
+    position: fixed; bottom: 82px; right: 76px; z-index: 200;
+    width: 220px;
+    background: var(--surface);
+    border: 2px solid var(--dark);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    padding: 12px;
+    display: none;
+  }
+  #calc-panel.open { display: block; }
+  #calc-display {
+    background: var(--dark);
+    color: var(--accent2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: right;
+    min-height: 42px;
+    margin-bottom: 8px;
+    word-break: break-all;
+    letter-spacing: 0.03em;
+  }
+  #calc-expr {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.55);
+    text-align: right;
+    min-height: 14px;
+    margin-bottom: 2px;
+    word-break: break-all;
+  }
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .calc-btn {
+    padding: 9px 4px;
+    border-radius: 7px;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.08s;
+  }
+  .calc-btn:active { transform: scale(0.93); }
+  .calc-btn.num  { background: var(--surface2); color: var(--text); }
+  .calc-btn.num:hover { background: var(--primary-light); }
+  .calc-btn.op   { background: var(--primary-light); color: var(--primary); }
+  .calc-btn.op:hover { background: #c4d3e8; }
+  .calc-btn.eq   { background: var(--dark); color: var(--accent2); grid-column: span 2; }
+  .calc-btn.eq:hover { background: #4a4641; }
+  .calc-btn.clr  { background: var(--red-bg); color: var(--red); }
+  .calc-btn.clr:hover { background: #f8c8c4; }
+  .calc-btn.del  { background: var(--orange-bg); color: var(--orange); }
+  .calc-btn.del:hover { background: #ffdcc4; }
+
+  /* ===== Print Styles ===== */
+  @media print {
+    header .header-actions, .btn, footer, #calc-fab, #calc-panel,
+    #drug-calc-fab, #drug-calc-modal { display: none !important; }
+    header { position: static; background: #5c5953 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card { box-shadow: none; break-inside: avoid; }
+    .card-body.hidden { display: block !important; }
+    body { background: #fff; }
+    .disclaimer { display: block !important; }
+    .checkbox-grid, .form-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .checkbox-grid { grid-template-columns: 1fr 1fr; }
+    .ett-grid { grid-template-columns: 1fr 1fr; }
+    .monitor-grid { grid-template-columns: 1fr 1fr; }
+    .drug-table { font-size: 0.8rem; }
+    .drug-table th, .drug-table td { padding: 6px 7px; }
+    header h1 { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-top">
+    <img src="logo.png" alt="Logo" class="header-logo"
+         onerror="this.style.display='none'">
+    <div class="header-text">
+      <h1>小兒外科麻醉導航 Pediatric Surgery Anesthesia Navigator</h1>
+      <p>教學輔助工具 / 術前準備提醒 / 臨床快速查閱</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-white" onclick="window.print()">列印</button>
+    <button class="btn btn-danger" onclick="clearAll()">清除全部</button>
+  </div>
+</header>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+  <!-- 免責聲明 -->
+  <div class="disclaimer">
+    本工具僅供教育與臨床提醒，不取代醫師判斷、院內流程或即時病人評估。
+    所有計算結果須經醫師確認後方可使用。
+  </div>
+
+  <!-- ===== A. 基本資料輸入 ===== -->
+  <div class="card" id="card-input">
+    <div class="card-header" onclick="toggleCard('card-input')">
+      <h2>病患基本資料 &amp; 手術資訊</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-input">
+
+      <div class="form-grid">
+
+        <!-- 年齡分群 -->
+        <div class="form-group">
+          <label for="ageGroup">年齡分群</label>
+          <select id="ageGroup" onchange="updateAll()">
+            <option value="">-- 請選擇 --</option>
+            <option value="neonate">新生兒 (0–28 天)</option>
+            <option value="infant">嬰兒 (1–12 個月)</option>
+            <option value="toddler">幼兒 (1–3 歲)</option>
+            <option value="preschool">學齡前 (3–6 歲)</option>
+            <option value="school">學齡兒童 (6–12 歲)</option>
+            <option value="adolescent">青少年 (12 歲以上)</option>
+          </select>
+        </div>
+
+        <!-- 年齡（歲 + 月），用於 ETT 公式 -->
+        <div class="form-group">
+          <label>年齡（用於 ETT 計算）</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" id="ageYears" min="0" max="18" step="1"
+                   placeholder="歲" oninput="updateAll()"
+                   style="width:60px;">
+            <span style="font-size:0.82rem;color:var(--text-sub);flex-shrink:0;">歲</span>
+            <input type="number" id="ageMonths" min="0" max="11" step="1"
+                   placeholder="月" oninput="updateAll()"
+                   style="width:60px;">
+            <span style="font-size:0.82rem;color:var(--text-sub);flex-shrink:0;">個月</span>
+          </div>
+        </div>
+
+        <!-- 體重 -->
+        <div class="form-group">
+          <label for="weight">體重（kg）</label>
+          <input type="number" id="weight" min="0.5" max="100" step="0.1"
+                 placeholder="例：12.5" oninput="updateAll()">
+        </div>
+
+        <!-- ASA -->
+        <div class="form-group">
+          <label for="asa">ASA 分級</label>
+          <select id="asa" onchange="updateAll()">
+            <option value="">-- 請選擇 --</option>
+            <option value="1">ASA I</option>
+            <option value="2">ASA II</option>
+            <option value="3">ASA III</option>
+            <option value="4">ASA IV</option>
+            <option value="5">ASA V</option>
+            <option value="E">ASA Emergency</option>
+          </select>
+        </div>
+
+        <!-- 手術類型 -->
+        <div class="form-group" style="grid-column: span 2;">
+          <label for="surgery">手術類型</label>
+          <select id="surgery" onchange="updateAll()">
+            <option value="">-- 請選擇手術 --</option>
+            <option value="inguinal">Inguinal hernia repair</option>
+            <option value="appendectomy">Appendectomy</option>
+            <option value="pyloric">Pyloric stenosis (Pyloromyotomy)</option>
+            <option value="intussusception">Intussusception</option>
+            <option value="bowel_obstruction">Bowel obstruction</option>
+            <option value="nec">Necrotizing enterocolitis (NEC)</option>
+            <option value="gastroschisis">Gastroschisis / Omphalocele</option>
+            <option value="anorectal">Anorectal malformation</option>
+            <option value="hirschsprung">Hirschsprung disease</option>
+            <option value="laparotomy">Exploratory laparotomy</option>
+            <option value="foreign_body">Foreign body removal</option>
+            <option value="abscess">Abscess drainage</option>
+            <option value="urologic">Urologic pediatric surgery</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+
+      </div><!-- /form-grid -->
+
+      <!-- ===== 高風險條件 ===== -->
+      <div class="section-title" style="margin-top:18px;">高風險條件勾選</div>
+      <div class="checkbox-grid" id="riskCheckboxes">
+        <!-- 高風險項目 (risk-high class = 勾選後顯示紅色) -->
+        <label class="checkbox-item risk-high" id="lbl-emergency">
+          <input type="checkbox" id="riskEmergency" onchange="updateAll(); syncLabel(this)"> 急診手術
+        </label>
+        <label class="checkbox-item risk-high" id="lbl-full_stomach">
+          <input type="checkbox" id="riskFullStomach" onchange="updateAll(); syncLabel(this)"> 疑似 Full Stomach
+        </label>
+        <label class="checkbox-item risk-high" id="lbl-bowel_obs">
+          <input type="checkbox" id="riskBowelObs" onchange="updateAll(); syncLabel(this)"> 腸胃道阻塞
+        </label>
+        <label class="checkbox-item risk-high" id="lbl-sepsis">
+          <input type="checkbox" id="riskSepsis" onchange="updateAll(); syncLabel(this)"> 敗血症
+        </label>
+        <label class="checkbox-item risk-high" id="lbl-shock">
+          <input type="checkbox" id="riskShock" onchange="updateAll(); syncLabel(this)"> 休克或低血壓
+        </label>
+        <label class="checkbox-item risk-high" id="lbl-acidosis">
+          <input type="checkbox" id="riskAcidosis" onchange="updateAll(); syncLabel(this)"> 酸中毒
+        </label>
+        <label class="checkbox-item" id="lbl-npo">
+          <input type="checkbox" id="riskNPO" onchange="updateAll(); syncLabel(this)"> 禁食時間不足
+        </label>
+        <label class="checkbox-item" id="lbl-vomiting">
+          <input type="checkbox" id="riskVomiting" onchange="updateAll(); syncLabel(this)"> 嘔吐
+        </label>
+        <label class="checkbox-item" id="lbl-distension">
+          <input type="checkbox" id="riskDistension" onchange="updateAll(); syncLabel(this)"> 腹脹
+        </label>
+        <label class="checkbox-item" id="lbl-dehydration">
+          <input type="checkbox" id="riskDehydration" onchange="updateAll(); syncLabel(this)"> 脫水
+        </label>
+        <label class="checkbox-item" id="lbl-electrolyte">
+          <input type="checkbox" id="riskElectrolyte" onchange="updateAll(); syncLabel(this)"> 電解質異常
+        </label>
+        <label class="checkbox-item" id="lbl-premature">
+          <input type="checkbox" id="riskPremature" onchange="updateAll(); syncLabel(this)"> 早產兒或矯正年齡小
+        </label>
+        <label class="checkbox-item" id="lbl-uri">
+          <input type="checkbox" id="riskURI" onchange="updateAll(); syncLabel(this)"> 近期上呼吸道感染
+        </label>
+        <label class="checkbox-item" id="lbl-asthma">
+          <input type="checkbox" id="riskAsthma" onchange="updateAll(); syncLabel(this)"> 氣喘或喘鳴
+        </label>
+        <label class="checkbox-item" id="lbl-anemia">
+          <input type="checkbox" id="riskAnemia" onchange="updateAll(); syncLabel(this)"> 貧血
+        </label>
+        <label class="checkbox-item" id="lbl-coag">
+          <input type="checkbox" id="riskCoag" onchange="updateAll(); syncLabel(this)"> 凝血異常
+        </label>
+        <label class="checkbox-item" id="lbl-transfusion">
+          <input type="checkbox" id="riskTransfusion" onchange="updateAll(); syncLabel(this)"> 可能需要大量輸血
+        </label>
+        <label class="checkbox-item" id="lbl-icu">
+          <input type="checkbox" id="riskICU" onchange="updateAll(); syncLabel(this)"> 可能需要術後 ICU
+        </label>
+        <label class="checkbox-item" id="lbl-airway">
+          <input type="checkbox" id="riskAirway" onchange="updateAll(); syncLabel(this)"> 困難氣道風險
+        </label>
+        <label class="checkbox-item" id="lbl-family">
+          <input type="checkbox" id="riskFamily" onchange="updateAll(); syncLabel(this)"> 家屬焦慮或溝通困難
+        </label>
+      </div>
+
+    </div><!-- /card-body -->
+  </div><!-- /card-input -->
+
+  <!-- ===== B. 風險總覽 ===== -->
+  <div class="card" id="card-risk">
+    <div class="card-header" onclick="toggleCard('card-risk')">
+      <h2>風險總覽</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-risk">
+      <div id="riskOverview" class="risk-overview risk-low">
+        <span class="risk-badge">低風險</span>
+        <span class="risk-desc">請輸入病患資料與高風險條件以產生風險評估。</span>
+      </div>
+      <div id="riskDetails" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== C. 麻醉前評估提醒 ===== -->
+  <div class="card" id="card-preop">
+    <div class="card-header" onclick="toggleCard('card-preop')">
+      <h2>麻醉前評估提醒 Pre-operative Assessment</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-preop">
+      <ul class="result-list" id="preopList">
+        <li class="info"><span>請先輸入病患資料。</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== D. 誘導策略 ===== -->
+  <div class="card" id="card-induction">
+    <div class="card-header" onclick="toggleCard('card-induction')">
+      <h2>誘導策略提醒 Induction Strategy</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-induction">
+      <ul class="result-list" id="inductionList">
+        <li class="info"><span>請先選擇手術類型與風險條件。</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== E. 備物清單 ===== -->
+  <div class="card" id="card-checklist">
+    <div class="card-header" onclick="toggleCard('card-checklist')">
+      <h2>備物清單 Equipment Checklist</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-checklist">
+      <div class="checklist" id="checklistItems"></div>
+    </div>
+  </div>
+
+  <!-- ===== F. 插管尺寸 ===== -->
+  <div class="card" id="card-ett">
+    <div class="card-header" onclick="toggleCard('card-ett')">
+      <h2>小兒插管尺寸計算 ETT Size Calculator</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-ett">
+      <div id="ettContent">
+        <div class="empty-state">請輸入年齡以計算 ETT 尺寸。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== G. 藥物劑量 ===== -->
+  <div class="card" id="card-drugs">
+    <div class="card-header" onclick="toggleCard('card-drugs')">
+      <h2>藥物劑量計算 Drug Dose Calculator</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-drugs">
+      <div id="drugContent">
+        <div class="empty-state">請輸入體重以計算藥物劑量。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== H. 輸液計算 ===== -->
+  <div class="card" id="card-fluid">
+    <div class="card-header" onclick="toggleCard('card-fluid')">
+      <h2>輸液計算 Fluid Management</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-fluid">
+      <div id="fluidContent">
+        <div class="empty-state">請輸入體重以計算輸液速率。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== I. 術中監測 ===== -->
+  <div class="card" id="card-monitor">
+    <div class="card-header" onclick="toggleCard('card-monitor')">
+      <h2>術中監測重點 Intraoperative Monitoring</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-monitor">
+      <div class="monitor-grid" id="monitorGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== J. 術後照護 ===== -->
+  <div class="card" id="card-postop">
+    <div class="card-header" onclick="toggleCard('card-postop')">
+      <h2>術後照護提醒 Post-operative Care</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-postop">
+      <ul class="result-list" id="postopList">
+        <li class="info"><span>請先輸入病患資料。</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== K. 疾病重點 ===== -->
+  <div class="card" id="card-disease">
+    <div class="card-header" onclick="toggleCard('card-disease')">
+      <h2>疾病重點提醒 Disease-specific Notes</h2>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="card-body" id="body-card-disease">
+      <div id="diseaseContent">
+        <div class="empty-state">請選擇手術類型以顯示疾病重點。</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ===== DRUG CALCULATOR MODAL ===== -->
+<div id="drug-calc-modal" onclick="closeDrugCalc(event)">
+  <div id="drug-calc-frame-wrap">
+    <button id="drug-calc-close" onclick="closeDrugCalcBtn()" title="關閉">&#10005;</button>
+    <iframe id="drug-calc-iframe" src="" title="小兒麻醉藥物計算機" allow="fullscreen"></iframe>
+  </div>
+</div>
+<button id="drug-calc-fab" onclick="openDrugCalc()" title="小兒麻醉藥物計算機">
+  Rx
+</button>
+
+<!-- ===== FLOATING CALCULATOR ===== -->
+<div id="calc-panel">
+  <div id="calc-display">
+    <div id="calc-expr"></div>
+    <div id="calc-result">0</div>
+  </div>
+  <div class="calc-grid">
+    <button class="calc-btn clr" onclick="calcAC()">AC</button>
+    <button class="calc-btn del" onclick="calcDel()">DEL</button>
+    <button class="calc-btn op"  onclick="calcInput('%')">%</button>
+    <button class="calc-btn op"  onclick="calcInput('/')">÷</button>
+
+    <button class="calc-btn num" onclick="calcInput('7')">7</button>
+    <button class="calc-btn num" onclick="calcInput('8')">8</button>
+    <button class="calc-btn num" onclick="calcInput('9')">9</button>
+    <button class="calc-btn op"  onclick="calcInput('*')">×</button>
+
+    <button class="calc-btn num" onclick="calcInput('4')">4</button>
+    <button class="calc-btn num" onclick="calcInput('5')">5</button>
+    <button class="calc-btn num" onclick="calcInput('6')">6</button>
+    <button class="calc-btn op"  onclick="calcInput('-')">−</button>
+
+    <button class="calc-btn num" onclick="calcInput('1')">1</button>
+    <button class="calc-btn num" onclick="calcInput('2')">2</button>
+    <button class="calc-btn num" onclick="calcInput('3')">3</button>
+    <button class="calc-btn op"  onclick="calcInput('+')">+</button>
+
+    <button class="calc-btn num" onclick="calcInput('0')" style="grid-column:span 2;">0</button>
+    <button class="calc-btn num" onclick="calcInput('.')">.</button>
+    <button class="calc-btn eq"  onclick="calcEqual()" style="grid-column:span 1;">=</button>
+  </div>
+</div>
+<button id="calc-fab" onclick="toggleCalc()" title="計算機">&#9783;</button>
+
+<footer>
+  Version 1.0 &nbsp;|&nbsp; 小兒外科麻醉導航 Pediatric Surgery Anesthesia Navigator<br>
+  適用於小兒外科麻醉教學與術前準備提醒。本工具不取代醫師臨床判斷。
+</footer>
+
+<script>
+// ============================================================
+//  DATA STRUCTURES — 易於擴充
+// ============================================================
+
+/**
+ * surgeryProfiles
+ * 每個手術項目包含：
+ *   label       顯示名稱
+ *   diseaseKey  對應 diseaseDatabase 的 key (若有)
+ *   autoRisks   選擇此手術時自動建議注意的風險
+ */
+const surgeryProfiles = {
+  inguinal: {
+    label: "Inguinal hernia repair",
+    diseaseKey: "inguinal",
+    autoRisks: []
+  },
+  appendectomy: {
+    label: "Appendectomy",
+    diseaseKey: "appendectomy",
+    autoRisks: ["riskFullStomach"]
+  },
+  pyloric: {
+    label: "Pyloric stenosis (Pyloromyotomy)",
+    diseaseKey: "pyloric",
+    autoRisks: ["riskFullStomach", "riskElectrolyte", "riskDehydration"]
+  },
+  intussusception: {
+    label: "Intussusception",
+    diseaseKey: "intussusception",
+    autoRisks: ["riskBowelObs", "riskVomiting"]
+  },
+  bowel_obstruction: {
+    label: "Bowel obstruction",
+    diseaseKey: "bowel_obstruction",
+    autoRisks: ["riskFullStomach", "riskBowelObs", "riskDistension"]
+  },
+  nec: {
+    label: "Necrotizing enterocolitis (NEC)",
+    diseaseKey: "nec",
+    autoRisks: ["riskSepsis", "riskAcidosis", "riskPremature", "riskICU"]
+  },
+  gastroschisis: {
+    label: "Gastroschisis / Omphalocele",
+    diseaseKey: "gastroschisis",
+    autoRisks: ["riskDehydration", "riskElectrolyte", "riskICU"]
+  },
+  anorectal: { label: "Anorectal malformation", diseaseKey: null, autoRisks: [] },
+  hirschsprung: { label: "Hirschsprung disease", diseaseKey: null, autoRisks: [] },
+  laparotomy: {
+    label: "Exploratory laparotomy",
+    diseaseKey: null,
+    autoRisks: ["riskEmergency", "riskFullStomach"]
+  },
+  foreign_body: { label: "Foreign body removal", diseaseKey: null, autoRisks: [] },
+  abscess: { label: "Abscess drainage", diseaseKey: null, autoRisks: [] },
+  urologic: { label: "Urologic pediatric surgery", diseaseKey: null, autoRisks: [] },
+  other: { label: "其他", diseaseKey: null, autoRisks: [] }
+};
+
+/**
+ * emergencyDrugs — 急救藥物
+ * id: 唯一識別（用於濃度 input element id）
+ * unit: mg 或 mcg（計算單位）
+ * concUnit: mg/mL 或 mcg/mL（配合 unit）
+ * defaultConc: 預設濃度
+ */
+const emergencyDrugs = [
+  { id: "atropine",    name: "Atropine",          unit: "mg",  doseMin: 0.02, doseMax: 0.02, minAbs: 0.1,  maxAbs: 0.5,  defaultConc: 0.5,  concUnit: "mg/mL",  note: "min 0.1 mg，避免矛盾性心搏過緩（副交感阻斷）" },
+  { id: "epi_iv",     name: "Epinephrine (IV)",   unit: "mg",  doseMin: 0.01, doseMax: 0.01, minAbs: null, maxAbs: null, defaultConc: 0.1,  concUnit: "mg/mL",  note: "1:10,000 溶液；心跳停止急救劑量" },
+  { id: "epi_ett",    name: "Epinephrine (ETT)",  unit: "mg",  doseMin: 0.1,  doseMax: 0.1,  minAbs: null, maxAbs: null, defaultConc: 1.0,  concUnit: "mg/mL",  note: "1:1,000 原液；氣管內給藥，效果較 IV 差" },
+  { id: "succinyl",   name: "Succinylcholine",    unit: "mg",  doseMin: 1.0,  doseMax: 2.0,  minAbs: null, maxAbs: null, defaultConc: 20,   concUnit: "mg/mL",  note: "嬰兒建議 2 mg/kg；注意高鉀血症禁忌" },
+];
+
+/**
+ * inductionDrugs — 誘導 / 輔助藥物
+ */
+const inductionDrugs = [
+  { id: "propofol",   name: "Propofol",            unit: "mg",  doseMin: 1.0,  doseMax: 3.0,  minAbs: null, maxAbs: null, defaultConc: 10,   concUnit: "mg/mL",  note: "注意心肌抑制與低血壓；< 3 歲謹慎使用" },
+  { id: "ketamine",   name: "Ketamine",             unit: "mg",  doseMin: 1.0,  doseMax: 2.0,  minAbs: null, maxAbs: null, defaultConc: 50,   concUnit: "mg/mL",  note: "休克病人首選；注意分泌物增加（備 Atropine）" },
+  { id: "fentanyl",   name: "Fentanyl",             unit: "mcg", doseMin: 1.0,  doseMax: 2.0,  minAbs: null, maxAbs: null, defaultConc: 50,   concUnit: "mcg/mL", note: "新生兒呼吸抑制風險高，需謹慎" },
+  { id: "rocuronium", name: "Rocuronium",           unit: "mg",  doseMin: 0.6,  doseMax: 1.2,  minAbs: null, maxAbs: null, defaultConc: 10,   concUnit: "mg/mL",  note: "RSI 劑量 1.2 mg/kg；備 Sugammadex 16 mg/kg 拮抗" },
+  { id: "midazolam",  name: "Midazolam",            unit: "mg",  doseMin: 0.05, doseMax: 0.1,  minAbs: null, maxAbs: 5,    defaultConc: 1,    concUnit: "mg/mL",  note: "術前鎮靜；max 5 mg；注意呼吸抑制" },
+  { id: "dexa",       name: "Dexamethasone",        unit: "mg",  doseMin: 0.15, doseMax: 0.15, minAbs: null, maxAbs: 10,   defaultConc: 5,    concUnit: "mg/mL",  note: "PONV 預防 / 消腫；max 10 mg" },
+  { id: "ondansetron",name: "Ondansetron",          unit: "mg",  doseMin: 0.1,  doseMax: 0.15, minAbs: null, maxAbs: 4,    defaultConc: 2,    concUnit: "mg/mL",  note: "PONV 預防；max 4 mg" },
+];
+
+// 濃度暫存：使用者可修改（key: drug.id, value: 目前濃度）
+const userConc = {};
+
+/**
+ * riskFactorConfig
+ * 每個風險條件的 id、分數加權、是否屬於「極高風險觸發條件」
+ */
+const riskFactorConfig = {
+  riskEmergency:   { score: 2, extreme: false, label: "急診手術" },
+  riskFullStomach: { score: 3, extreme: true,  label: "疑似 Full Stomach" },
+  riskBowelObs:    { score: 3, extreme: true,  label: "腸胃道阻塞" },
+  riskSepsis:      { score: 3, extreme: true,  label: "敗血症" },
+  riskShock:       { score: 3, extreme: true,  label: "休克或低血壓" },
+  riskAcidosis:    { score: 3, extreme: true,  label: "酸中毒" },
+  riskNPO:         { score: 1, extreme: false, label: "禁食時間不足" },
+  riskVomiting:    { score: 1, extreme: false, label: "嘔吐" },
+  riskDistension:  { score: 2, extreme: false, label: "腹脹" },
+  riskDehydration: { score: 2, extreme: false, label: "脫水" },
+  riskElectrolyte: { score: 1, extreme: false, label: "電解質異常" },
+  riskPremature:   { score: 2, extreme: false, label: "早產兒或矯正年齡小" },
+  riskURI:         { score: 1, extreme: false, label: "近期 URI" },
+  riskAsthma:      { score: 1, extreme: false, label: "氣喘或喘鳴" },
+  riskAnemia:      { score: 1, extreme: false, label: "貧血" },
+  riskCoag:        { score: 2, extreme: false, label: "凝血異常" },
+  riskTransfusion: { score: 2, extreme: false, label: "可能需要大量輸血" },
+  riskICU:         { score: 1, extreme: false, label: "可能需要術後 ICU" },
+  riskAirway:      { score: 2, extreme: false, label: "困難氣道風險" },
+  riskFamily:      { score: 0, extreme: false, label: "家屬焦慮或溝通困難" }
+};
+
+/**
+ * diseaseDatabase
+ * 每個疾病的麻醉重點卡片
+ * points: { tag, tagClass, text }
+ */
+const diseaseDatabase = {
+  pyloric: {
+    title: "Pyloric Stenosis（幽門狹窄）",
+    subtitle: "Pyloromyotomy — 不是單純急診，術前電解質矯正最重要",
+    points: [
+      { tag: "代謝", tagClass: "tag-orange", text: "典型表現：Hypochloremic hypokalemic metabolic alkalosis（低氯、低鉀、代謝性鹼中毒）。" },
+      { tag: "術前", tagClass: "tag-red", text: "需先矯正脫水與電解質至接近正常後再安排手術，不是急救手術。目標：Na > 130, Cl > 90, K > 3, HCO3 < 30, 尿量正常。" },
+      { tag: "術前", tagClass: "tag-orange", text: "術前放置 NG tube，抽空胃內容物，再拔除（或保留至手術結束）。" },
+      { tag: "誘導", tagClass: "tag-red", text: "仍有 aspiration risk，需考慮 modified RSI 或 awake intubation in neonate。" },
+      { tag: "術後", tagClass: "tag-orange", text: "注意 post-operative apnea，尤其早產兒或矯正年齡小嬰兒；術後需監測至少 24 小時。" },
+      { tag: "提醒", tagClass: "tag-blue", text: "Succinylcholine 給藥後注意低鉀引起的心律問題。" }
+    ]
+  },
+  bowel_obstruction: {
+    title: "Bowel Obstruction（腸道阻塞）",
+    subtitle: "Full stomach — RSI 為標準誘導方式",
+    points: [
+      { tag: "緊急", tagClass: "tag-red", text: "視為 full stomach，aspiration risk 高，需 RSI 或 modified RSI。" },
+      { tag: "術前", tagClass: "tag-red", text: "放置 NG tube 抽空胃液；術前評估脫水、電解質、酸鹼狀態。" },
+      { tag: "呼吸", tagClass: "tag-orange", text: "腹脹可能造成膈肌上移，通氣困難，誘導後注意 SpO2 與 EtCO2。" },
+      { tag: "循環", tagClass: "tag-orange", text: "可能低血壓，誘導前充分補液，備 vasopressor（Epinephrine / Norepinephrine）。" },
+      { tag: "術中", tagClass: "tag-blue", text: "注意大量液體散失（third spacing）、體溫散失、腸管曝露散熱。" },
+      { tag: "術後", tagClass: "tag-orange", text: "評估是否需 ICU 或 ventilator，尤其有酸中毒、低血壓、新生兒。" }
+    ]
+  },
+  nec: {
+    title: "Necrotizing Enterocolitis (NEC)（壞死性腸炎）",
+    subtitle: "早產兒最常見腸道外科急症 — 術前狀況常極不穩定",
+    points: [
+      { tag: "族群", tagClass: "tag-blue", text: "常見早產兒、低出生體重兒，病情可快速惡化。" },
+      { tag: "緊急", tagClass: "tag-red", text: "Sepsis、Acidosis、Coagulopathy 常同時存在，需積極復甦。" },
+      { tag: "體溫", tagClass: "tag-red", text: "新生兒體溫調節差，全程保溫（手術台加溫墊、溫熱液體、暖氣毯）。" },
+      { tag: "監測", tagClass: "tag-orange", text: "術中需 ABG、lactate、glucose、electrolyte 密切監測。" },
+      { tag: "輸血", tagClass: "tag-orange", text: "備 PRBC、FFP、Platelet；coagulopathy 高風險，注意 DIC 可能。" },
+      { tag: "術後", tagClass: "tag-red", text: "幾乎所有 NEC 手術病人術後需 NICU 與 ventilator 支持。" }
+    ]
+  },
+  gastroschisis: {
+    title: "Gastroschisis / Omphalocele（腹裂 / 臍膨出）",
+    subtitle: "新生兒腹壁缺損 — 散熱與水分散失極高",
+    points: [
+      { tag: "保溫", tagClass: "tag-red", text: "腸管曝露於外，散熱與水分散失大，需立即用溫濕紗布覆蓋，全程保溫。" },
+      { tag: "術前", tagClass: "tag-orange", text: "積極 fluid resuscitation；監測 glucose（新生兒低血糖風險）與 electrolyte。" },
+      { tag: "呼吸", tagClass: "tag-orange", text: "腸管回納後腹壓上升，可能影響通氣；注意 peak airway pressure。" },
+      { tag: "誘導", tagClass: "tag-orange", text: "Omphalocele 需區分 isolated 或合併其他畸形（心臟、染色體）；Gastroschisis 通常較單純。" },
+      { tag: "術後", tagClass: "tag-red", text: "幾乎所有腹壁缺損手術術後需 NICU，可能需 ventilator 與 TPN。" },
+      { tag: "提醒", tagClass: "tag-blue", text: "Omphalocele 與 Beckwith-Wiedemann syndrome 相關，注意低血糖。" }
+    ]
+  },
+  appendectomy: {
+    title: "Appendectomy（闌尾切除術）",
+    subtitle: "需區分單純 appendicitis 與 perforated appendicitis",
+    points: [
+      { tag: "評估", tagClass: "tag-blue", text: "單純 appendicitis 風險較低，通常可 IV induction，快速可靠的麻醉誘導。" },
+      { tag: "注意", tagClass: "tag-orange", text: "Perforated appendicitis：視為 full stomach，需考慮 RSI；可能伴有 sepsis、fluid deficit。" },
+      { tag: "術前", tagClass: "tag-orange", text: "評估發燒程度、WBC、CRP；評估是否已有 septic shock 前兆。" },
+      { tag: "術中", tagClass: "tag-blue", text: "腹腔鏡手術注意氣腹（CO2 insufflation）對呼吸的影響，注意 EtCO2 上升。" },
+      { tag: "術後", tagClass: "tag-blue", text: "PONV 預防（Ondansetron + Dexamethasone）；疼痛控制（Ketorolac / Paracetamol / Opioid）。" }
+    ]
+  },
+  inguinal: {
+    title: "Inguinal Hernia Repair（腹股溝疝氣修補）",
+    subtitle: "Elective vs Incarcerated — 風險差異極大",
+    points: [
+      { tag: "常規", tagClass: "tag-green", text: "Elective repair 通常風險低，可選擇 inhalation 或 IV induction，LMA 可能適用。" },
+      { tag: "緊急", tagClass: "tag-red", text: "Incarcerated hernia 視為急診、full stomach，注意腸阻塞、嘔吐、脫水、aspiration risk。" },
+      { tag: "族群", tagClass: "tag-orange", text: "前早產兒（ex-premature）術後 apnea 風險高，需術後 apnea monitoring 24 小時。" },
+      { tag: "麻醉", tagClass: "tag-blue", text: "可考慮 spinal anesthesia（saddle block）於嬰兒，避免全麻 apnea 風險。" },
+      { tag: "術後", tagClass: "tag-blue", text: "區域麻醉可提供良好術後止痛：ilioinguinal/iliohypogastric nerve block 或 TAP block。" }
+    ]
+  },
+  intussusception: {
+    title: "Intussusception（腸套疊）",
+    subtitle: "多數先由放射科灌腸復位，失敗再送手術室",
+    points: [
+      { tag: "評估", tagClass: "tag-orange", text: "評估復位嘗試次數、腸壁血流狀態、發燒、腹膜炎徵象。" },
+      { tag: "誘導", tagClass: "tag-red", text: "嘔吐、腸阻塞風險，視為 full stomach，準備 RSI 與 suction。" },
+      { tag: "術前", tagClass: "tag-orange", text: "評估脫水程度，補充輸液；評估電解質。" },
+      { tag: "術中", tagClass: "tag-blue", text: "注意腸管活性；若有腸壞死需切除，手術時間較長，注意體溫與輸液。" }
+    ]
+  }
+};
+
+/**
+ * equipmentDatabase
+ * priority: true = 優先備妥（紅色左邊框）
+ * condition: function(state) => 是否顯示此項目
+ */
+const equipmentDatabase = [
+  { item: "麻醉機檢查（circuit 漏氣、蒸發器、吸收劑）", priority: true, condition: () => true },
+  { item: "適合尺寸面罩（Mask）", priority: true, condition: () => true },
+  { item: "LMA — 尺寸依體重選擇（見下方）", priority: false, condition: (s) => !s.riskFullStomach && !s.riskBowelObs },
+  { item: "ETT Cuffed 與 Uncuffed 各備一支（見 ETT 計算）", priority: true, condition: () => true },
+  { item: "Laryngoscope（Miller blade for infant, Macintosh for older child）", priority: true, condition: () => true },
+  { item: "Stylet（備用）", priority: false, condition: () => true },
+  { item: "Suction（立即可用）", priority: true, condition: () => true },
+  { item: "IV line（至少一條，高風險備兩條）", priority: true, condition: () => true },
+  { item: "Fluid warmer", priority: false, condition: (s) => s.riskDehydration || s.riskSepsis || s.riskShock || s.nec || s.gastroschisis },
+  { item: "Forced-air warmer（Bair Hugger）", priority: false, condition: () => true },
+  { item: "體溫監測（Nasopharyngeal / Rectal probe）", priority: true, condition: () => true },
+  { item: "小兒血壓袖帶（適合尺寸）", priority: true, condition: () => true },
+  { item: "Pulse oximeter", priority: true, condition: () => true },
+  { item: "Capnography（EtCO2）", priority: true, condition: () => true },
+  { item: "NG tube（術前減壓）", priority: true, condition: (s) => s.riskFullStomach || s.riskBowelObs || s.riskDistension || s.riskVomiting },
+  { item: "Foley catheter（術中尿量監測）", priority: false, condition: (s) => s.riskShock || s.riskSepsis || s.riskEmergency },
+  { item: "Arterial line setup（動脈壓監測）", priority: true, condition: (s) => s.riskShock || s.riskSepsis || s.riskAcidosis },
+  { item: "Central venous line setup", priority: false, condition: (s) => s.riskShock || s.riskSepsis || s.riskTransfusion },
+  { item: "Blood warmer（輸血加溫）", priority: true, condition: (s) => s.riskTransfusion },
+  { item: "Emergency drugs tray（Atropine, Epinephrine 已抽好）", priority: true, condition: () => true },
+  { item: "Sugammadex（Rocuronium 拮抗）", priority: false, condition: () => true },
+  { item: "Lipid emulsion 20%（局麻藥毒性 LAST 急救）", priority: true, condition: (s) => s.regionalAnesthesia },
+  { item: "困難氣道備案（Video laryngoscope / Bronchoscope）", priority: true, condition: (s) => s.riskAirway },
+  { item: "PICU / NICU bed 確認", priority: true, condition: (s) => s.riskICU || s.riskSepsis || s.riskShock }
+];
+
+// ============================================================
+//  STATE — 目前病患狀態
+// ============================================================
+let state = {};
+
+function readState() {
+  const _ageYears  = parseFloat(document.getElementById('ageYears').value)  || 0;
+  const _ageMonths = parseFloat(document.getElementById('ageMonths').value) || 0;
+  const _ageTotalYears = _ageYears + _ageMonths / 12;
+
+  state = {
+    ageGroup: document.getElementById('ageGroup').value,
+    ageYears: (_ageTotalYears > 0) ? _ageTotalYears : null,  // 小數年齡，供 ETT 公式使用
+    weight:   parseFloat(document.getElementById('weight').value) || null,
+    asa:      document.getElementById('asa').value,
+    surgery:  document.getElementById('surgery').value,
+    // 風險條件
+    riskEmergency:   document.getElementById('riskEmergency').checked,
+    riskFullStomach: document.getElementById('riskFullStomach').checked,
+    riskBowelObs:    document.getElementById('riskBowelObs').checked,
+    riskSepsis:      document.getElementById('riskSepsis').checked,
+    riskShock:       document.getElementById('riskShock').checked,
+    riskAcidosis:    document.getElementById('riskAcidosis').checked,
+    riskNPO:         document.getElementById('riskNPO').checked,
+    riskVomiting:    document.getElementById('riskVomiting').checked,
+    riskDistension:  document.getElementById('riskDistension').checked,
+    riskDehydration: document.getElementById('riskDehydration').checked,
+    riskElectrolyte: document.getElementById('riskElectrolyte').checked,
+    riskPremature:   document.getElementById('riskPremature').checked,
+    riskURI:         document.getElementById('riskURI').checked,
+    riskAsthma:      document.getElementById('riskAsthma').checked,
+    riskAnemia:      document.getElementById('riskAnemia').checked,
+    riskCoag:        document.getElementById('riskCoag').checked,
+    riskTransfusion: document.getElementById('riskTransfusion').checked,
+    riskICU:         document.getElementById('riskICU').checked,
+    riskAirway:      document.getElementById('riskAirway').checked,
+    riskFamily:      document.getElementById('riskFamily').checked
+  };
+  // 年齡分群是否屬於新生兒/嬰兒
+  state.isNeonate = state.ageGroup === 'neonate';
+  state.isInfant  = state.ageGroup === 'infant' || state.ageGroup === 'neonate';
+}
+
+// ============================================================
+//  MAIN UPDATE FUNCTION
+// ============================================================
+function updateAll() {
+  readState();
+  renderRisk();
+  renderPreop();
+  renderInduction();
+  renderChecklist();
+  renderETT();
+  renderDrugs();
+  renderFluid();
+  renderMonitor();
+  renderPostop();
+  renderDisease();
+}
+
+// ============================================================
+//  1. RISK CALCULATION
+// ============================================================
+function calcRisk() {
+  let score = 0;
+  let extremeTriggers = [];
+
+  // ASA 加分
+  const asaScore = { '1':0, '2':1, '3':2, '4':3, '5':4, 'E':3 };
+  if (state.asa) score += (asaScore[state.asa] || 0);
+
+  // 年齡：新生兒加分
+  if (state.isNeonate) score += 2;
+
+  // 風險條件分數
+  for (const [id, cfg] of Object.entries(riskFactorConfig)) {
+    if (state[id]) {
+      score += cfg.score;
+      if (cfg.extreme) extremeTriggers.push(cfg.label);
+    }
+  }
+
+  // 判斷級別
+  let level, label, desc;
+  if (extremeTriggers.length > 0) {
+    level = 'extreme'; label = '極高風險'; desc = '具有以下高危觸發條件：' + extremeTriggers.join('、');
+  } else if (score >= 7) {
+    level = 'extreme'; label = '極高風險'; desc = '複合風險因子積分高，需謹慎術前評估與準備。';
+  } else if (score >= 4) {
+    level = 'high'; label = '高風險'; desc = '存在多項風險條件，建議資深醫師主導麻醉評估。';
+  } else if (score >= 2) {
+    level = 'medium'; label = '中風險'; desc = '需注意特定風險條件，做好備物與監測。';
+  } else {
+    level = 'low'; label = '低風險'; desc = '目前評估風險較低，仍需完整術前評估。';
+  }
+
+  return { level, label, desc, score, extremeTriggers };
+}
+
+function renderRisk() {
+  const risk = calcRisk();
+  const el = document.getElementById('riskOverview');
+  el.className = `risk-overview risk-${risk.level}`;
+  el.innerHTML = `
+    <span class="risk-badge">${risk.label}</span>
+    <span class="risk-desc">${risk.desc}（積分 ${risk.score}）</span>
+  `;
+
+  // 勾選的風險條件列表
+  const checkedRisks = Object.entries(riskFactorConfig)
+    .filter(([id]) => state[id])
+    .map(([,cfg]) => cfg.label);
+
+  const det = document.getElementById('riskDetails');
+  if (checkedRisks.length > 0) {
+    det.innerHTML = '<div class="section-title">已勾選風險條件</div>' +
+      checkedRisks.map(r => `<span style="display:inline-block;background:var(--red-bg);color:var(--red);border:1px solid #e08080;border-radius:12px;padding:3px 10px;font-size:0.78rem;margin:3px 3px 0 0;font-weight:600;">${r}</span>`).join('');
+  } else {
+    det.innerHTML = '';
+  }
+}
+
+// ============================================================
+//  2. PRE-OP ASSESSMENT
+// ============================================================
+function renderPreop() {
+  const items = [];
+  const s = state;
+
+  // 基本
+  items.push({ cls: 'info', text: '確認禁食時間：固體食物 > 6 小時；母乳 > 4 小時；清水 > 2 小時（成人指引，嬰兒依院內規範）。' });
+
+  if (s.riskNPO)         items.push({ cls: 'warn', text: '禁食時間可能不足：評估胃部是否仍有殘餘；考慮 NG 抽空或 RSI。' });
+  if (s.riskDehydration) items.push({ cls: 'warn', text: '脫水：評估皮膚彈性、前囟門、眼窩、尿量、心跳、血壓；術前補充 IV fluid。' });
+  if (s.riskElectrolyte) items.push({ cls: 'warn', text: '電解質異常：送 Na、K、Cl、HCO3、Ca、Mg 等；矯正後才能安全給藥（尤其 Succinylcholine 與低鉀）。' });
+  if (s.riskAcidosis)    items.push({ cls: 'alert', text: '酸中毒：需送 ABG；評估原因（sepsis / ischemia / DKA）；可能需 NaHCO3 矯正或積極復甦後才能手術。' });
+  if (s.riskAnemia)      items.push({ cls: 'warn', text: '貧血：確認 Hb；術前考慮是否輸血（Hb < 7 g/dL 手術需謹慎，Hb < 5 g/dL 需輸血）。' });
+  if (s.riskCoag)        items.push({ cls: 'warn', text: '凝血異常：送 PT / APTT / INR / Platelet；備 FFP、Platelet concentrate、Cryoprecipitate。' });
+  if (s.riskSepsis)      items.push({ cls: 'alert', text: '敗血症：確認感染源、抗生素使用狀況；評估血壓、心跳、乳酸、器官灌流；考慮術前 vasopressor 與 resuscitation。' });
+  if (s.riskShock)       items.push({ cls: 'alert', text: '休克：術前積極補液復甦（10–20 mL/kg NS 或 LR bolus）；備 Epinephrine / Norepinephrine；建立 Arterial line。' });
+  if (s.riskURI)         items.push({ cls: 'warn', text: '近期 URI：評估症狀是否仍活躍（發燒 > 38℃、濃痰、喘鳴）；若症狀明顯，考慮延後 elective 手術 2–4 週。' });
+  if (s.riskAsthma)      items.push({ cls: 'warn', text: '氣喘或喘鳴：確認最後一次喘鳴發作時間；確認使用支氣管擴張劑（Salbutamol MDI 術前使用）。' });
+  if (s.riskTransfusion) items.push({ cls: 'warn', text: '大量輸血可能：備 PRBC 2 U；確認輸血同意書；啟動大量輸血流程（MTP）準備。' });
+  if (s.riskICU)         items.push({ cls: 'warn', text: '術後 ICU 需求：提前聯繫 PICU / NICU 確認床位；術後轉送計畫需明確。' });
+  if (s.riskPremature)   items.push({ cls: 'warn', text: '早產兒或矯正年齡小：術後 apnea 風險高；評估矯正年齡（矯正後 < 60 週風險尤高）。' });
+  if (s.riskAirway)      items.push({ cls: 'alert', text: '困難氣道：備 Video laryngoscope（GlideScope / C-MAC）、較小尺寸 ETT；準備緊急氣切備案；告知手術醫師。' });
+  if (s.isNeonate)       items.push({ cls: 'warn', text: '新生兒：注意體溫（目標 36.5–37.5℃）、血糖（目標 60–150 mg/dL）、輸液精準控制。' });
+  if (s.riskFamily)      items.push({ cls: 'info', text: '家屬溝通：術前充分說明麻醉計畫、風險、術後照護；確認同意書。' });
+
+  if (items.length === 0) items.push({ cls: 'info', text: '請勾選風險條件以產生評估提醒。' });
+
+  const ul = document.getElementById('preopList');
+  ul.innerHTML = items.map(i => `<li class="${i.cls}"><span>${i.text}</span></li>`).join('');
+}
+
+// ============================================================
+//  3. INDUCTION STRATEGY
+// ============================================================
+function renderInduction() {
+  const items = [];
+  const s = state;
+  const isFullStomach = s.riskFullStomach || s.riskBowelObs || s.riskNPO || s.riskVomiting;
+  const isShockSepsis = s.riskShock || s.riskSepsis;
+  const isRespRisk = s.riskURI || s.riskAsthma;
+
+  if (!s.surgery && !isFullStomach && !isShockSepsis && !isRespRisk) {
+    items.push({ cls: 'info', text: '請選擇手術類型或勾選風險條件，以產生誘導策略建議。' });
+  } else {
+    // Full stomach / RSI
+    if (isFullStomach || s.surgery === 'pyloric' || s.surgery === 'bowel_obstruction' || s.surgery === 'intussusception') {
+      items.push({ cls: 'alert', text: '高吸入風險：建議 Rapid Sequence Induction (RSI) 或 Modified RSI。' });
+      items.push({ cls: 'alert', text: 'RSI 流程：預氧合 3 分鐘 → Cricoid pressure（Sellick maneuver，可選）→ Rocuronium 1.2 mg/kg 或 Succinylcholine 1–2 mg/kg → 待充分肌鬆再插管，避免 bag-mask ventilation。' });
+      items.push({ cls: 'warn', text: '確認 Suction 立即可用（Yankauer suction + 小兒 suction catheter）。' });
+      items.push({ cls: 'warn', text: '術前放置 NG tube 抽空胃液，但插管前拔除（NG 在位影響 LES 壓力）。' });
+      if (s.riskAirway) {
+        items.push({ cls: 'alert', text: '困難氣道 + Full Stomach：考慮 awake intubation（新生兒/嬰兒）或清醒鎮靜插管。備妥 Video laryngoscope。' });
+      }
+    }
+
+    // Shock / Sepsis
+    if (isShockSepsis) {
+      items.push({ cls: 'alert', text: '休克 / 敗血症：避免使用高劑量 Propofol 或 Thiopental（強心肌抑制）。' });
+      items.push({ cls: 'warn', text: '首選 Ketamine 1–2 mg/kg（維持心血管功能）；若已有極度心衰竭需謹慎。' });
+      items.push({ cls: 'warn', text: '誘導前確保 IV access 良好、vasopressor 已備好；建議 Arterial line 先建立。' });
+      items.push({ cls: 'warn', text: '所有藥物需 slow titration，避免一次性快速給藥造成循環崩潰。' });
+    }
+
+    // URI / Asthma
+    if (isRespRisk) {
+      items.push({ cls: 'warn', text: '氣道高敏感：優先考慮 LMA 而非 ETT 以減少刺激（若非 full stomach 且可用 LMA）。' });
+      items.push({ cls: 'warn', text: '術前使用 Salbutamol MDI；預備 Bronchodilator（Salbutamol 2.5 mg nebulizer）術中隨時可用。' });
+      items.push({ cls: 'warn', text: '誘導期維持較深麻醉深度再放置氣道器械；避免淺麻醉下刺激氣道造成 Laryngospasm / Bronchospasm。' });
+      items.push({ cls: 'warn', text: 'Laryngospasm 處理備案：Propofol 0.5 mg/kg IV（打破喉頭痙攣）/ Succinylcholine 0.1–1 mg/kg / CPAP 正壓通氣。' });
+    }
+
+    // Routine
+    if (!isFullStomach && !isShockSepsis && !isRespRisk) {
+      items.push({ cls: 'ok', text: '常規小兒手術：可依病人狀況選擇 Inhalation induction（Sevoflurane 8% 起步）或 IV induction（Propofol / Ketamine）。' });
+      items.push({ cls: 'info', text: '嬰兒或不合作幼兒常使用 Sevoflurane 面罩誘導，建立 IV 後再給肌鬆藥與插管。' });
+      items.push({ cls: 'info', text: '術前可在等候室給 Midazolam 0.5 mg/kg PO（max 15 mg）或 Dexmedetomidine 鼻噴作為術前鎮靜。' });
+    }
+
+    // Neonate specific
+    if (s.isNeonate) {
+      items.push({ cls: 'warn', text: '新生兒誘導：所有藥物劑量需精準（使用 1 mL 注射筒）；血壓與 SpO2 變化快速，需密切監測。' });
+      items.push({ cls: 'warn', text: '新生兒 Succinylcholine 劑量 2 mg/kg；Atropine 0.02 mg/kg（最小 0.1 mg）預防迷走神經過度反應。' });
+    }
+
+    // Premature
+    if (s.riskPremature) {
+      items.push({ cls: 'warn', text: '前早產兒：考慮 Spinal anesthesia 替代全麻（尤其腹股溝疝氣），避免全麻術後 apnea 風險。' });
+    }
+  }
+
+  const ul = document.getElementById('inductionList');
+  ul.innerHTML = items.map(i => `<li class="${i.cls}"><span>${i.text}</span></li>`).join('');
+}
+
+// ============================================================
+//  4. EQUIPMENT CHECKLIST
+// ============================================================
+function renderChecklist() {
+  const s = state;
+  const container = document.getElementById('checklistItems');
+  const items = equipmentDatabase.filter(eq => eq.condition(s));
+
+  // LMA size note
+  let lmaNote = '';
+  if (s.weight) {
+    let lmaSize;
+    if (s.weight < 5)       lmaSize = '1';
+    else if (s.weight < 10) lmaSize = '1.5';
+    else if (s.weight < 20) lmaSize = '2';
+    else if (s.weight < 30) lmaSize = '2.5';
+    else                    lmaSize = '3';
+    lmaNote = `（建議 LMA size: ${lmaSize}）`;
+  }
+
+  container.innerHTML = items.map((eq, i) => {
+    let text = eq.item;
+    if (text.includes('LMA') && lmaNote) text = text.replace('（見下方）', lmaNote);
+    return `
+      <label class="check-item ${eq.priority ? 'priority' : ''}" id="chk-${i}" onclick="toggleCheck(this)">
+        <input type="checkbox" onclick="event.stopPropagation(); toggleCheck(document.getElementById('chk-${i}'))">
+        ${text}
+      </label>`;
+  }).join('');
+
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state">請輸入病患資料以產生備物清單。</div>';
+  }
+}
+
+function toggleCheck(el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  el.classList.toggle('done', cb.checked);
+}
+
+// ============================================================
+//  5. ETT SIZE
+// ============================================================
+
+// 實際可供應的 ETT 號碼（整數 or 0.5 步距）
+const VALID_ETT = [2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8];
+
+// snap 到最近的合法號碼
+function snapETT(rawSize) {
+  return VALID_ETT.reduce((prev, curr) =>
+    Math.abs(curr - rawSize) < Math.abs(prev - rawSize) ? curr : prev
+  );
+}
+
+function renderETT() {
+  const s = state;
+  const el = document.getElementById('ettContent');
+
+  if (!s.ageYears && !s.ageGroup) {
+    el.innerHTML = '<div class="empty-state">請輸入年齡以計算 ETT 尺寸。</div>';
+    return;
+  }
+
+  // 組成顯示用年齡字串（歲 + 個月）
+  const _rawYears  = parseInt(document.getElementById('ageYears').value)  || 0;
+  const _rawMonths = parseInt(document.getElementById('ageMonths').value) || 0;
+  const ageDisplay = _rawYears > 0 && _rawMonths > 0
+    ? `${_rawYears} 歲 ${_rawMonths} 個月`
+    : _rawYears > 0 ? `${_rawYears} 歲`
+    : _rawMonths > 0 ? `${_rawMonths} 個月` : '';
+
+  // 新生兒 / 嬰兒 — 不用年齡公式，改用參考表
+  if (s.isInfant) {
+    const refTable = [
+      { range: '早產兒 < 1 kg',  cuffed: '2.5', uncuffed: '2.5', depth: '6–7 cm' },
+      { range: '早產兒 1–2 kg', cuffed: '2.5', uncuffed: '2.5', depth: '7–8 cm' },
+      { range: '新生兒 2–3 kg', cuffed: '3',   uncuffed: '3',   depth: '9–10 cm' },
+      { range: '新生兒 > 3 kg', cuffed: '3',   uncuffed: '3.5', depth: '10–11 cm' },
+      { range: '嬰兒 1–6 個月', cuffed: '3.5', uncuffed: '3.5', depth: '11–12 cm' },
+      { range: '嬰兒 6–12 個月',cuffed: '3.5', uncuffed: '4',   depth: '12–13 cm' }
+    ];
+    el.innerHTML = `
+      <div class="drug-note" style="margin-bottom:10px;">
+        新生兒 / 嬰兒不建議單用年齡公式，請依體重參考下表，並以臨床確認（漏氣測試 / CXR / EtCO2 波形）。
+        號碼均為實際可供應尺寸（mm ID）。
+      </div>
+      <table class="drug-table">
+        <thead><tr><th>年齡 / 體重</th><th>Cuffed ETT (mm)</th><th>Uncuffed ETT (mm)</th><th>插管深度（口腔）</th></tr></thead>
+        <tbody>
+          ${refTable.map(r => `<tr><td>${r.range}</td><td class="dose-result">${r.cuffed}</td><td class="dose-result">${r.uncuffed}</td><td>${r.depth}</td></tr>`).join('')}
+        </tbody>
+      </table>`;
+    return;
+  }
+
+  // 年齡公式計算後 snap 到合法號碼
+  const age = s.ageYears || 0;
+  const rawCuffed   = age / 4 + 3.5;
+  const rawUncuffed = age / 4 + 4;
+  const cuffed      = snapETT(rawCuffed);
+  const uncuffed    = snapETT(rawUncuffed);
+  const cuffedLarger = snapETT(rawCuffed + 0.5);  // 備用大半號
+  const depth       = +(cuffed * 3).toFixed(1);
+
+  el.innerHTML = `
+    <div class="ett-grid">
+      <div class="ett-item">
+        <div class="ett-label">Cuffed ETT（年齡/4 + 3.5 → 最近可用號）</div>
+        <div class="ett-value">${cuffed}</div>
+        <div class="ett-unit">mm ID</div>
+      </div>
+      <div class="ett-item">
+        <div class="ett-label">Uncuffed ETT（年齡/4 + 4 → 最近可用號）</div>
+        <div class="ett-value">${uncuffed}</div>
+        <div class="ett-unit">mm ID</div>
+      </div>
+      <div class="ett-item">
+        <div class="ett-label">插管深度 Oral（ETT size × 3）</div>
+        <div class="ett-value">${depth}</div>
+        <div class="ett-unit">cm at lips</div>
+      </div>
+      <div class="ett-item">
+        <div class="ett-label">備用（大半號 cuffed）</div>
+        <div class="ett-value">${cuffedLarger}</div>
+        <div class="ett-unit">mm ID</div>
+      </div>
+    </div>
+    <div class="drug-note">
+      公式原始計算：Cuffed ${rawCuffed.toFixed(2)} mm → snap 至 <strong>${cuffed}</strong> mm；
+      Uncuffed ${rawUncuffed.toFixed(2)} mm → snap 至 <strong>${uncuffed}</strong> mm。<br>
+      需依臨床確認：漏氣測試（20–30 cmH₂O 時有輕微漏氣）、CXR 確認管端位置、EtCO2 波形確認通氣。<br>
+      計算年齡：${ageDisplay}（換算 ${age.toFixed(2)} 歲）。
+    </div>`;
+}
+
+// ============================================================
+//  6. DRUG DOSES — 誘導藥 + 急救藥（分開顯示，含 mL 計算）
+// ============================================================
+
+/** 計算單一藥物的總劑量（含 min/max 限制），回傳 { minDose, maxDose, displayStr } */
+function calcDose(drug, weight) {
+  let minD = +(drug.doseMin * weight).toFixed(3);
+  let maxD = +(drug.doseMax * weight).toFixed(3);
+
+  // min absolute
+  if (drug.minAbs !== null && minD < drug.minAbs) {
+    minD = drug.minAbs;
+    maxD = Math.max(maxD, drug.minAbs);
+  }
+  // max absolute
+  if (drug.maxAbs !== null) {
+    minD = Math.min(minD, drug.maxAbs);
+    maxD = Math.min(maxD, drug.maxAbs);
+  }
+
+  minD = +minD.toFixed(2);
+  maxD = +maxD.toFixed(2);
+
+  const displayStr = minD === maxD
+    ? `${minD} ${drug.unit}`
+    : `${minD}–${maxD} ${drug.unit}`;
+
+  return { minD, maxD, displayStr };
+}
+
+/** 計算 mL，回傳顯示字串 */
+function calcML(drug, minD, maxD, weight) {
+  const conc = userConc[drug.id] !== undefined ? userConc[drug.id] : drug.defaultConc;
+  if (!conc || conc <= 0) return '—';
+  const mlMin = +(minD / conc).toFixed(2);
+  const mlMax = +(maxD / conc).toFixed(2);
+  return mlMin === mlMax ? `${mlMin} mL` : `${mlMin}–${mlMax} mL`;
+}
+
+/** 渲染一張藥物表格 */
+function buildDrugTable(drugs, weight, tableId) {
+  const rows = drugs.map(drug => {
+    const { minD, maxD, displayStr } = calcDose(drug, weight);
+    const conc = userConc[drug.id] !== undefined ? userConc[drug.id] : drug.defaultConc;
+    const mlStr = calcML(drug, minD, maxD, weight);
+    const dosePerKg = drug.doseMin === drug.doseMax
+      ? `${drug.doseMin}`
+      : `${drug.doseMin}–${drug.doseMax}`;
+
+    // 展開列：總劑量 + 注意事項，colspan 撐滿整行
+    const detailRow = `<tr class="drug-detail-row" id="detail-row-${drug.id}" style="display:none;">
+      <td colspan="4" style="padding:0;border-top:none;">
+        <div class="drug-note-text">
+          <div class="drug-note-dose-line">
+            <span class="drug-note-dose-label">總劑量</span>
+            <span id="dose-${drug.id}">${displayStr}</span>
+          </div>
+          <div>${drug.note}</div>
+        </div>
+      </td>
+    </tr>`;
+
+    const mainRow = `<tr id="row-${drug.id}">
+      <td>
+        <strong>${drug.name}</strong>
+        <div style="font-size:0.72rem;color:var(--text-sub);margin-top:1px;">${dosePerKg} ${drug.unit}/kg</div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;">
+          <input type="number" id="conc-${drug.id}" value="${conc}" min="0.01" step="0.01"
+            style="width:58px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;text-align:right;"
+            oninput="updateConc('${drug.id}', this.value, '${tableId}')">
+          <span style="font-size:0.72rem;color:var(--text-sub);white-space:nowrap;">${drug.concUnit}</span>
+        </div>
+      </td>
+      <td class="dose-result" id="ml-${drug.id}" style="color:var(--primary);font-size:1rem;">${mlStr}</td>
+      <td>
+        <details class="drug-note-details" ontoggle="toggleDetailRow('${drug.id}', this.open)">
+          <summary>詳細</summary>
+        </details>
+      </td>
+    </tr>`;
+
+    return mainRow + detailRow;
+  }).join('');
+
+  return `<table class="drug-table" id="${tableId}">
+    <thead>
+      <tr>
+        <th>藥物 / 劑量</th>
+        <th>濃度（可修改）</th>
+        <th>mL</th>
+        <th>詳細</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+/** 展開/收合總劑量＋注意事項列 */
+function toggleDetailRow(drugId, isOpen) {
+  const row = document.getElementById(`detail-row-${drugId}`);
+  if (row) row.style.display = isOpen ? 'table-row' : 'none';
+}
+
+/** 使用者修改濃度時，只更新 mL 欄，不重繪整張表 */
+function updateConc(drugId, newVal, tableId) {
+  const conc = parseFloat(newVal);
+  userConc[drugId] = isNaN(conc) ? 0 : conc;
+
+  const w = state.weight;
+  if (!w) return;
+
+  const allDrugs = [...emergencyDrugs, ...inductionDrugs];
+  const drug = allDrugs.find(d => d.id === drugId);
+  if (!drug) return;
+
+  const { minD, maxD } = calcDose(drug, w);
+  const mlStr = calcML(drug, minD, maxD, w);
+  const mlEl = document.getElementById(`ml-${drugId}`);
+  if (mlEl) mlEl.textContent = mlStr;
+}
+
+function renderDrugs() {
+  const s = state;
+  const el = document.getElementById('drugContent');
+
+  if (!s.weight) {
+    el.innerHTML = '<div class="empty-state">請輸入體重以計算藥物劑量。</div>';
+    return;
+  }
+
+  const w = s.weight;
+
+  // 保留使用者已修改的濃度值（重繪時從 DOM 讀回）
+  [...emergencyDrugs, ...inductionDrugs].forEach(drug => {
+    const inputEl = document.getElementById(`conc-${drug.id}`);
+    if (inputEl) {
+      const v = parseFloat(inputEl.value);
+      if (!isNaN(v)) userConc[drug.id] = v;
+    }
+  });
+
+  el.innerHTML = `
+    <div class="section-title" style="color:var(--red);border-color:var(--red);">急救藥物 Emergency Drugs</div>
+    ${buildDrugTable(emergencyDrugs, w, 'tbl-emergency')}
+
+    <div class="section-title" style="margin-top:18px;color:var(--primary);border-color:var(--accent);">誘導 / 輔助藥物 Induction &amp; Adjunct Drugs</div>
+    ${buildDrugTable(inductionDrugs, w, 'tbl-induction')}
+
+    <div class="drug-note" style="margin-top:10px;">
+      劑量僅供教學與快速複習，實際給藥需依病人狀態、院內規範、醫師指示確認。<br>
+      mL 欄依濃度欄位自動計算（可直接修改濃度）；所有計算以體重 ${w} kg 為準。
+    </div>`;
+}
+
+// ============================================================
+//  7. FLUID CALCULATION (Holliday-Segar)
+// ============================================================
+function renderFluid() {
+  const s = state;
+  const el = document.getElementById('fluidContent');
+
+  if (!s.weight) {
+    el.innerHTML = '<div class="empty-state">請輸入體重以計算輸液速率。</div>';
+    return;
+  }
+
+  const w = s.weight;
+  let rate = 0;
+  let breakdown = '';
+
+  if (w <= 10) {
+    rate = 4 * w;
+    breakdown = `前 10 kg：4 mL × ${w} kg = ${rate} mL/hr`;
+  } else if (w <= 20) {
+    rate = 40 + 2 * (w - 10);
+    breakdown = `前 10 kg：40 mL/hr + 第 11–${w} kg：2 mL × ${(w-10).toFixed(1)} kg = ${rate.toFixed(1)} mL/hr`;
+  } else {
+    rate = 40 + 20 + 1 * (w - 20);
+    breakdown = `前 10 kg：40 + 第 11–20 kg：20 + 超過 20 kg：1 mL × ${(w-20).toFixed(1)} kg = ${rate.toFixed(1)} mL/hr`;
+  }
+
+  const needWarn = s.riskDehydration || s.riskSepsis || s.riskShock || s.riskBowelObs;
+
+  el.innerHTML = `
+    <div class="fluid-box">
+      <div class="ett-label">Holliday-Segar Maintenance Rate（${w} kg）</div>
+      <div class="fluid-rate">${parseFloat(rate).toFixed(1)} mL/hr</div>
+      <div class="fluid-breakdown">${breakdown}</div>
+    </div>
+    ${needWarn ? `
+    <div class="drug-note" style="margin-top:10px; border-color:var(--orange); background:var(--orange-bg); color:var(--orange);">
+      注意：Maintenance fluid 不等於 Resuscitation fluid。<br>
+      存在脫水 / 腸阻塞 / 敗血症 / 休克時，需另外評估：Fluid deficit（體重 × 脫水百分比）、Third spacing（腹部手術可達 10–15 mL/kg/hr）、Ongoing loss（NG 引流、血液）、Hemodynamic response（心跳、血壓、尿量、乳酸）。<br>
+      建議與醫師討論個別化輸液計畫。
+    </div>` : ''}
+    <div style="margin-top:10px;font-size:0.82rem;color:var(--text-sub);">
+      術中第一小時常用 4–6 mL/kg bolus 補充術前液體欠缺（若有）。
+      嬰幼兒使用含 Glucose 的維持液（如 D5 0.45% NaCl）需監測血糖。
+    </div>`;
+}
+
+// ============================================================
+//  8. MONITORING
+// ============================================================
+function renderMonitor() {
+  const s = state;
+  const grid = document.getElementById('monitorGrid');
+  const isHighRisk = s.riskShock || s.riskSepsis || s.riskAcidosis;
+
+  const monitors = [
+    { label: 'ECG',              cls: '',                dotCls: 'dot-green',  show: true },
+    { label: 'NIBP',             cls: '',                dotCls: 'dot-green',  show: true },
+    { label: 'SpO2',             cls: '',                dotCls: 'dot-green',  show: true },
+    { label: 'EtCO2',            cls: '',                dotCls: 'dot-green',  show: true },
+    { label: 'Temp (Core)',      cls: '',                dotCls: 'dot-blue',   show: true },
+    { label: 'Urine Output',     cls: 'important',       dotCls: 'dot-orange', show: s.riskShock || s.riskSepsis || s.riskEmergency },
+    { label: 'Blood Glucose',    cls: 'important',       dotCls: 'dot-orange', show: s.isNeonate || s.isInfant || s.riskSepsis },
+    { label: 'ABG / Lactate',    cls: 'important',       dotCls: 'dot-orange', show: s.riskAcidosis || s.riskSepsis || s.riskShock },
+    { label: 'Electrolytes',     cls: 'important',       dotCls: 'dot-orange', show: s.riskElectrolyte || s.riskDehydration },
+    { label: 'Invasive Art. BP', cls: 'critical',        dotCls: 'dot-red',    show: isHighRisk },
+    { label: 'Blood Loss Estim.', cls: 'important',      dotCls: 'dot-orange', show: s.riskTransfusion || s.riskCoag },
+    { label: 'CVP',              cls: 'important',       dotCls: 'dot-orange', show: s.riskShock || s.riskSepsis },
+    { label: 'NMT (Nerve Stim)', cls: '',                dotCls: 'dot-blue',   show: true },
+    { label: 'BIS / Depth of Anesthesia', cls: '',       dotCls: 'dot-blue',   show: isHighRisk },
+    { label: 'Platelet / Coag (POC)', cls: 'important',  dotCls: 'dot-orange', show: s.riskCoag || s.riskTransfusion },
+    { label: 'NIRS (Cerebral Oximetry)', cls: '',        dotCls: 'dot-blue',   show: s.isNeonate || isHighRisk },
+  ];
+
+  const visible = monitors.filter(m => m.show);
+  grid.innerHTML = visible.map(m => `
+    <div class="monitor-item ${m.cls}">
+      <div class="monitor-dot ${m.dotCls}"></div>
+      ${m.label}
+    </div>`).join('');
+
+  if (visible.length === 0) {
+    grid.innerHTML = '<div class="empty-state">請輸入病患資料。</div>';
+  }
+}
+
+// ============================================================
+//  9. POST-OP CARE
+// ============================================================
+function renderPostop() {
+  const s = state;
+  const items = [];
+
+  items.push({ cls: 'info', text: 'PACU 觀察：確保 PACU 備有小兒急救設備，護理師熟悉小兒評估（Aldrete score / Steward score）。' });
+  items.push({ cls: 'info', text: '疼痛控制：使用多模式止痛（Paracetamol IV / Ketorolac / Opioid + 區域麻醉）；使用兒童疼痛量表（FLACC / NRS）評估。' });
+  items.push({ cls: 'info', text: 'PONV 預防：Ondansetron 0.15 mg/kg（max 4 mg）+ Dexamethasone 0.15 mg/kg；術中維持 TIVA 可降低 PONV 風險。' });
+
+  if (s.riskURI || s.riskAsthma)  items.push({ cls: 'warn', text: '氣道水腫 / Laryngospasm：術後拔管後密切觀察喘鳴；備 Nebulized Epinephrine（Racemic Epi）與 Dexamethasone。' });
+  if (s.riskPremature || s.isInfant) items.push({ cls: 'alert', text: 'Apnea monitoring：早產兒或矯正年齡 < 60 週，術後需 apnea monitor 至少 24 小時（甚至 overnight admission）。' });
+  if (s.riskPremature)             items.push({ cls: 'warn', text: '前早產兒術後 Caffeine：可預防 apnea（Caffeine citrate 10–20 mg/kg IV loading）；與 neonatologist 討論。' });
+  if (s.isNeonate || s.isInfant)  items.push({ cls: 'warn', text: '體溫維持：新生兒 / 嬰兒散熱快，術後維持環境溫暖，監測核心體溫至正常（36.5–37.5℃）。' });
+  if (s.riskDehydration || s.riskSepsis) items.push({ cls: 'warn', text: '液體平衡：記錄 input / output（IV fluid、尿量、引流量、出血量）；術後 12 小時每小時記錄一次。' });
+  if (s.riskICU || s.riskSepsis || s.riskShock) items.push({ cls: 'alert', text: 'ICU / Ventilator：確認 PICU / NICU 床位；準備轉送文件（Anesthesia handover note）；告知 ICU 團隊接收準備。' });
+  if (s.riskFamily)                items.push({ cls: 'info', text: '家屬溝通：術後盡快告知手術結果與術後計畫；說明疼痛控制、預期恢復時程、回診安排。' });
+  if (s.riskAnemia || s.riskTransfusion) items.push({ cls: 'warn', text: '術後 Hb 複查：評估出血量與 Hb 變化；術後 4–6 小時複查 CBC。' });
+
+  const ul = document.getElementById('postopList');
+  ul.innerHTML = items.map(i => `<li class="${i.cls}"><span>${i.text}</span></li>`).join('');
+}
+
+// ============================================================
+//  10. DISEASE CARDS
+// ============================================================
+function renderDisease() {
+  const s = state;
+  const el = document.getElementById('diseaseContent');
+
+  const surgProfile = surgeryProfiles[s.surgery];
+  const diseaseKey = surgProfile ? surgProfile.diseaseKey : null;
+  const disease = diseaseKey ? diseaseDatabase[diseaseKey] : null;
+
+  if (!disease) {
+    el.innerHTML = '<div class="empty-state">請選擇有對應疾病重點的手術類型。</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="disease-card">
+      <div class="disease-card-header">${disease.title}</div>
+      <div class="disease-card-body">
+        <div style="font-size:0.82rem;color:var(--text-sub);margin-bottom:8px;">${disease.subtitle}</div>
+        ${disease.points.map(p => `
+          <div class="disease-point">
+            <span class="tag ${p.tagClass}">${p.tag}</span>
+            <span>${p.text}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+
+// 切換卡片展開/折疊
+function toggleCard(cardId) {
+  const header = document.querySelector(`#${cardId} .card-header`);
+  const body   = document.getElementById(`body-${cardId}`);
+  if (!body) return;
+  const isHidden = body.classList.contains('hidden');
+  body.classList.toggle('hidden', !isHidden);
+  header.classList.toggle('collapsed', !isHidden);
+}
+
+// checkbox label 樣式同步
+function syncLabel(checkbox) {
+  const label = checkbox.closest('label');
+  if (label) label.classList.toggle('checked', checkbox.checked);
+}
+
+// 清除所有輸入
+function clearAll() {
+  if (!confirm('確定要清除所有輸入資料嗎？')) return;
+
+  document.getElementById('ageGroup').value  = '';
+  document.getElementById('ageYears').value  = '';
+  document.getElementById('ageMonths').value = '';
+  document.getElementById('weight').value    = '';
+  document.getElementById('asa').value       = '';
+  document.getElementById('surgery').value   = '';
+
+  document.querySelectorAll('#riskCheckboxes input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    const lbl = cb.closest('label');
+    if (lbl) lbl.classList.remove('checked');
+  });
+
+  // 清除備物清單勾選
+  document.querySelectorAll('.check-item').forEach(el => {
+    el.classList.remove('done');
+    const cb = el.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = false;
+  });
+
+  updateAll();
+}
+
+// ============================================================
+//  DRUG CALCULATOR MODAL
+// ============================================================
+function openDrugCalc() {
+  const modal   = document.getElementById('drug-calc-modal');
+  const iframe  = document.getElementById('drug-calc-iframe');
+  // 只在第一次（或 src 為空時）才載入，避免每次重新跑 PIN 畫面
+  if (!iframe.src || iframe.src === window.location.href) {
+    iframe.src = 'calculator.html';
+  }
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrugCalcBtn() {
+  document.getElementById('drug-calc-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// 點擊背景遮罩關閉
+function closeDrugCalc(e) {
+  if (e.target === document.getElementById('drug-calc-modal')) {
+    closeDrugCalcBtn();
+  }
+}
+
+// ESC 鍵關閉
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('drug-calc-modal');
+    if (modal.classList.contains('open')) {
+      closeDrugCalcBtn();
+      e.stopPropagation();
+    }
+  }
+}, true); // capture phase，優先於計算機的 ESC handler
+
+// ============================================================
+//  FLOATING CALCULATOR
+// ============================================================
+let calcExpr = '';   // 目前輸入的算式字串
+let calcJustEvaled = false; // 上一步是否按了 =
+
+function toggleCalc() {
+  document.getElementById('calc-panel').classList.toggle('open');
+}
+
+function calcInput(char) {
+  // 按下 = 之後再按數字，清空重新輸入
+  if (calcJustEvaled && /[\d.]/.test(char)) {
+    calcExpr = '';
+  }
+  // 按下 = 之後再按運算子，繼續接著算
+  calcJustEvaled = false;
+
+  // 防止連續運算符
+  if (/[+\-*/%]/.test(char) && /[+\-*/%]$/.test(calcExpr)) {
+    calcExpr = calcExpr.slice(0, -1);
+  }
+
+  calcExpr += char;
+  calcRefresh();
+}
+
+function calcAC() {
+  calcExpr = '';
+  calcJustEvaled = false;
+  document.getElementById('calc-expr').textContent   = '';
+  document.getElementById('calc-result').textContent = '0';
+}
+
+function calcDel() {
+  calcExpr = calcExpr.slice(0, -1);
+  calcRefresh();
+}
+
+function calcEqual() {
+  if (!calcExpr) return;
+  try {
+    // 把顯示用符號換回 JS 運算符
+    const safe = calcExpr
+      .replace(/÷/g, '/')
+      .replace(/×/g, '*')
+      .replace(/%/g, '/100');
+    // eslint-disable-next-line no-eval
+    const result = Function('"use strict"; return (' + safe + ')')();
+    const rounded = +parseFloat(result).toPrecision(10);
+    document.getElementById('calc-expr').textContent   = calcExpr + ' =';
+    document.getElementById('calc-result').textContent = isFinite(rounded) ? rounded : 'Error';
+    calcExpr = String(isFinite(rounded) ? rounded : '');
+    calcJustEvaled = true;
+  } catch {
+    document.getElementById('calc-result').textContent = 'Error';
+    calcExpr = '';
+  }
+}
+
+function calcRefresh() {
+  const display = calcExpr
+    .replace(/\*/g, '×')
+    .replace(/\//g, '÷');
+  document.getElementById('calc-expr').textContent   = '';
+  document.getElementById('calc-result').textContent = display || '0';
+}
+
+// 鍵盤支援（計算機開啟時）
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('calc-panel').classList.contains('open')) return;
+  if ('0123456789.+-*/'.includes(e.key)) { calcInput(e.key); e.preventDefault(); }
+  if (e.key === 'Enter' || e.key === '=') { calcEqual(); e.preventDefault(); }
+  if (e.key === 'Backspace') { calcDel(); e.preventDefault(); }
+  if (e.key === 'Escape') { toggleCalc(); e.preventDefault(); }
+});
+
+// ============================================================
+//  INIT
+// ============================================================
+// 頁面載入後初始渲染
+document.addEventListener('DOMContentLoaded', () => {
+  updateAll();
+  renderMonitor();
+});
+
+</script>
+</body>
+</html>

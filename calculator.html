@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>小兒麻醉藥物計算機</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小兒麻醉">
+<meta name="theme-color" content="#445668">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════
+   PIN LOCK SCREEN
+════════════════════════════════════════════ */
+#pin-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #1e2a35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 32px 24px 40px;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+#pin-screen.unlocked {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.pin-logo {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.pin-logo small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.8px;
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+.pin-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.65);
+  margin: 28px 0 22px;
+  letter-spacing: 0.3px;
+}
+/* PIN dots */
+.pin-dots {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+.pin-dot.filled {
+  background: #7a90a8;
+  border-color: #7a90a8;
+  transform: scale(1.15);
+}
+.pin-dot.error {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+/* Shake animation for wrong PIN */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  15%      { transform: translateX(-8px); }
+  35%      { transform: translateX(8px); }
+  55%      { transform: translateX(-5px); }
+  75%      { transform: translateX(5px); }
+}
+.pin-dots.shake { animation: shake 0.45s ease; }
+
+/* PIN numpad */
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 252px;
+}
+.pin-key {
+  height: 64px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 500;
+  font-family: 'DM Mono', monospace;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.pin-key:hover  { background: rgba(255,255,255,0.13); }
+.pin-key:active { background: rgba(255,255,255,0.22); transform: scale(0.94); }
+.pin-key.key-del {
+  font-size: 16px;
+  color: rgba(255,255,255,0.55);
+  background: transparent;
+}
+.pin-key.key-del:active { background: rgba(255,255,255,0.1); }
+.pin-key.key-empty {
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+.pin-error-msg {
+  margin-top: 18px;
+  font-size: 12px;
+  color: #e57373;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  min-height: 18px;
+  transition: opacity 0.2s;
+}
+
+/* ════════════════════════════════════════════
+   MAIN APP (hidden until unlocked)
+════════════════════════════════════════════ */
+#app-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s;
+  pointer-events: none;
+}
+#app-wrap.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ════════════════════════════════════════════
+   ORIGINAL APP STYLES (unchanged below)
+════════════════════════════════════════════ */
+:root {
+  --bg:       #f2f5f8;
+  --bg2:      #ffffff;
+  --bg3:      #e8edf2;
+  --border:   #cdd6e0;
+  --border2:  #b0c0cf;
+  --teal:     #5b6e82;
+  --teal-dim: #d8e2ec;
+  --teal-lt:  #edf2f7;
+  --teal-mid: #7a90a8;
+  --red:      #c0392b;
+  --red-dim:  #f7d6d3;
+  --red-lt:   #fdf1f0;
+  --amber:    #b5660f;
+  --amber-lt: #fef6ec;
+  --amber-bd: #f0c87a;
+  --green:    #5b6e82;
+  --green-lt: #edf2f7;
+  --ink:      #1e2a35;
+  --ink2:     #445060;
+  --ink3:     #7a8fa0;
+  --ink4:     #b0c0cf;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.05);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  background: #445668;
+  padding: 14px 16px 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.topbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: .3px;
+  line-height: 1.2;
+}
+.topbar-title small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(255,255,255,.7);
+  letter-spacing: .8px;
+  margin-top: 2px;
+}
+.topbar-badge {
+  background: rgba(255,255,255,.2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,.9);
+  letter-spacing: .5px;
+}
+.input-strip {
+  background: var(--bg2);
+  border-bottom: 1.5px solid var(--border);
+  padding: 12px 14px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+.wt-group { display: flex; flex-direction: column; gap: 4px; }
+.wt-group label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.wt-group input, .wt-group select {
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+  font-size: 16px;
+  padding: 8px 10px;
+  outline: none;
+  width: 80px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.wt-group select { width: 76px; font-family: inherit; font-size: 13px; cursor: pointer; }
+.wt-group input:focus, .wt-group select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(74,72,68,.12);
+}
+.calc-btn {
+  background: var(--teal);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 1;
+  transition: background .15s, transform .1s;
+  letter-spacing: .3px;
+  box-shadow: 0 2px 6px rgba(74,72,68,.3);
+}
+.calc-btn:active { background: var(--teal-mid); transform: scale(.98); }
+.warn-bar {
+  background: var(--amber-lt);
+  border-bottom: 1.5px solid var(--amber-bd);
+  padding: 9px 14px;
+  font-size: 11px;
+  color: var(--amber);
+  display: none;
+  line-height: 1.5;
+  font-weight: 500;
+}
+.warn-bar.show { display: block; }
+.mult-bar {
+  background: var(--amber-lt);
+  border-bottom: 1.5px solid var(--amber-bd);
+  padding: 10px 14px;
+  display: none;
+  flex-shrink: 0;
+}
+.mult-bar.show { display: block; }
+.mult-bar-label { font-size: 11px; color: var(--amber); font-weight: 700; margin-bottom: 8px; }
+.mult-btns { display: flex; gap: 8px; }
+.mult-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 8px;
+  border: 1.5px solid var(--amber-bd);
+  background: #fff;
+  color: var(--amber);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'DM Mono', monospace;
+}
+.mult-btn.selected { background: var(--amber); color: #fff; border-color: var(--amber); }
+.tabbar {
+  display: flex;
+  background: var(--bg2);
+  border-bottom: 1.5px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabbar::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 1;
+  min-width: 72px;
+  padding: 11px 6px 10px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink3);
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  transition: all .15s;
+  letter-spacing: .3px;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--ink2); }
+.tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px 100px;
+  -webkit-overflow-scrolling: touch;
+}
+.calc-card {
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.calc-card-header {
+  background: var(--teal);
+  padding: 10px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.calc-card-title { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: .2px; }
+.calc-card-sub { font-size: 10px; color: rgba(255,255,255,.7); letter-spacing: .3px; }
+.calc-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.calc-input-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 70px; }
+.calc-input-group label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+.calc-input-group input {
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+  font-size: 16px;
+  padding: 7px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color .2s, box-shadow .2s;
+}
+.calc-input-group input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(91,110,130,.12);
+}
+.calc-go-btn {
+  background: var(--teal);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.calc-go-btn:active { background: var(--teal-mid); }
+.calc-result-area { padding: 0 14px 14px; }
+.calc-formula-row { display: flex; gap: 8px; margin-top: 8px; }
+.calc-formula-cell {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 10px 8px;
+  text-align: center;
+}
+.calc-formula-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 4px;
+}
+.calc-formula-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--teal);
+  line-height: 1;
+}
+.calc-formula-unit { font-size: 10px; color: var(--ink3); margin-top: 3px; line-height: 1.4; }
+.calc-half-note {
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: var(--amber-lt);
+  border: 1px solid var(--amber-bd);
+  border-radius: 7px;
+  font-size: 11px;
+  color: var(--amber);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.calc-warn-note {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--ink3);
+  line-height: 1.6;
+  padding: 0 2px;
+}
+.calc-section-divider {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  padding: 16px 4px 6px;
+}
+.ino-role-tag {
+  display: inline-block;
+  margin: 8px 16px 0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  background: var(--teal-dim);
+  color: var(--teal);
+  border: 1px solid rgba(91,110,130,.2);
+}
+.ino-warn-note {
+  padding: 8px 16px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--red-lt);
+}
+.ino-warn-line { font-size: 11px; color: var(--red); font-weight: 500; line-height: 1.8; }
+.tab-section { display: none; }
+.tab-section.active { display: block; }
+.dil-toggle {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 8px 12px;
+}
+.dil-toggle-btn {
+  flex: 1;
+  padding: 7px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  color: var(--ink3);
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .2px;
+}
+.dil-toggle-btn:first-child { border-radius: 7px 0 0 7px; border-right: none; }
+.dil-toggle-btn:last-child  { border-radius: 0 7px 7px 0; }
+.dil-toggle-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); z-index: 1; }
+.drug-list { display: flex; flex-direction: column; gap: 8px; }
+.drug-btn {
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all .18s;
+  text-align: left;
+  width: 100%;
+  box-shadow: var(--shadow-sm);
+}
+.drug-btn:hover { border-color: var(--border2); box-shadow: var(--shadow-md); }
+.drug-btn:active { transform: scale(.99); }
+.drug-btn.open { border-color: var(--teal); background: var(--teal-lt); box-shadow: 0 2px 8px rgba(74,72,68,.10); }
+.drug-btn.danger-btn { border-color: var(--border); }
+.drug-btn.danger-btn.open { border-color: var(--red); background: var(--red-lt); }
+.drug-btn-left { flex: 1; }
+.drug-btn-name { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.drug-btn.open .drug-btn-name { color: var(--teal); }
+.drug-btn.danger-btn.open .drug-btn-name { color: var(--red); }
+.drug-btn-sub { font-size: 11px; color: var(--ink3); margin-top: 3px; }
+.drug-btn-dose { font-size: 11px; color: var(--ink2); text-align: right; margin-left: 10px; line-height: 1.4; }
+.drug-btn-arrow { font-size: 18px; color: var(--ink4); margin-left: 8px; transition: transform .2s; line-height: 1; }
+.drug-btn.open .drug-btn-arrow { transform: rotate(90deg); color: var(--teal); }
+.drug-btn.danger-btn.open .drug-btn-arrow { color: var(--red); }
+.drug-expand {
+  display: none;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  margin-top: -8px;
+  padding-top: 8px;
+  overflow: hidden;
+  animation: slideDown .18s ease;
+  box-shadow: var(--shadow-sm);
+}
+.drug-expand.open { display: block; }
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-tag {
+  padding: 7px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  background: var(--green-lt);
+  color: var(--green);
+  border-bottom: 1px solid rgba(46,125,79,.1);
+}
+.card-tag.warn { background: var(--red-lt); color: var(--red); border-bottom-color: rgba(192,57,43,.1); }
+.card-tag.amber { background: var(--amber-lt); color: var(--amber); }
+.card-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.5;
+}
+.step-num {
+  background: var(--teal-dim);
+  color: var(--teal);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.card-values { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
+.card-val-cell { flex: 1; padding: 14px 10px; text-align: center; border-right: 1px solid var(--border); }
+.card-val-cell:last-child { border-right: none; }
+.val-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--ink3);
+  margin-bottom: 5px;
+}
+.val-num { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; color: var(--teal); line-height: 1; }
+.val-num.red { color: var(--red); }
+.val-unit { font-size: 10px; color: var(--ink3); margin-top: 4px; }
+.card-rate {
+  display: flex;
+  padding: 10px 12px;
+  background: var(--teal-lt);
+  border-bottom: 1px solid rgba(74,72,68,.1);
+}
+.rate-cell { flex: 1; text-align: center; padding: 0 6px; border-right: 1px solid rgba(74,72,68,.15); }
+.rate-cell:last-child { border-right: none; }
+.rate-label { font-size: 9px; color: var(--ink3); margin-bottom: 3px; }
+.rate-num { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--teal); }
+.rate-unit { font-size: 9px; color: var(--ink3); }
+.card-note { padding: 9px 16px 12px; font-size: 11px; color: var(--ink3); line-height: 1.6; }
+.ino-formula {
+  padding: 9px 16px;
+  font-size: 12px;
+  color: var(--ink2);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+}
+.info-card {
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.7;
+  box-shadow: var(--shadow-sm);
+}
+.info-card b { color: var(--teal); }
+.info-card.warn-card { border-color: var(--amber-bd); background: var(--amber-lt); color: var(--amber); }
+.sec-header {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  padding: 4px 4px 8px;
+  margin-top: 4px;
+}
+.empty-state { text-align: center; padding: 52px 24px; color: var(--ink3); }
+.empty-icon { font-size: 36px; margin-bottom: 14px; opacity: .4; }
+.empty-text { font-size: 14px; line-height: 1.6; color: var(--ink3); }
+.print-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  background: var(--bg2);
+  border-top: 1.5px solid var(--border);
+  padding: 10px 12px 16px;
+  display: flex;
+  gap: 6px;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.06);
+}
+.print-bar button {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink2);
+  background: var(--bg);
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .2px;
+}
+.print-bar button:hover { border-color: var(--teal); color: var(--teal); }
+.print-bar .btn-all {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+  box-shadow: 0 2px 8px rgba(74,72,68,.20);
+}
+.print-bar .btn-all:hover { background: var(--teal-mid); }
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(44,42,39,.55);
+  backdrop-filter: blur(3px);
+  z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.overlay-box {
+  background: #fff;
+  border: 1.5px solid var(--red-dim);
+  border-radius: 16px;
+  padding: 24px 20px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0,0,0,.18);
+}
+.overlay-title { font-size: 15px; font-weight: 700; color: var(--red); margin-bottom: 12px; }
+.overlay-body { font-size: 13px; color: var(--ink2); line-height: 1.7; margin-bottom: 20px; }
+.overlay-btns { display: flex; gap: 10px; }
+.overlay-btns button {
+  flex: 1; padding: 12px; border-radius: 8px;
+  font-size: 14px; font-weight: 700; cursor: pointer; border: none;
+}
+.btn-cancel { background: var(--bg3); color: var(--ink2); }
+.btn-ok { background: var(--red); color: #fff; }
+@media print {
+  @page { size: A4 portrait; margin: 7mm 8mm 6mm; }
+  * { box-sizing: border-box; }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 6.5pt;
+    overflow: visible;
+    height: auto;
+    display: block;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #pin-screen { display: none !important; }
+  .topbar, .input-strip, .warn-bar, .mult-bar,
+  .tabbar, .main-scroll, .print-bar, .overlay,
+  .calc-tools { display: none !important; }
+  .print-only { display: block !important; }
+  .print-hdr {
+    display: block !important;
+    font-size: 10pt;
+    font-weight: 700;
+    color: #1e2a35;
+    padding-bottom: 2.5pt;
+    margin-bottom: 3pt;
+    border-bottom: 1.2pt solid #445668;
+    letter-spacing: .2pt;
+  }
+  .pt-row {
+    display: flex !important;
+    gap: 4pt;
+    flex-wrap: wrap;
+    margin-bottom: 3.5pt;
+    font-size: 6pt;
+    border-bottom: .3pt solid #ccc;
+    padding-bottom: 2.5pt;
+  }
+  .pt-row .pf { flex: 1; min-width: 44pt; }
+  .pt-row .pf b { color: #445668; margin-right: 2pt; }
+  .pgrid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 6pt;
+    align-items: start;
+  }
+  .psec {
+    font-size: 5pt;
+    font-weight: 700;
+    letter-spacing: .8pt;
+    text-transform: uppercase;
+    color: #fff;
+    background: #445668 !important;
+    padding: 1.5pt 4pt;
+    margin: 3pt 0 1.5pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .pdtbl { width: 100%; border-collapse: collapse; font-size: 6pt; margin-bottom: 2pt; table-layout: fixed; }
+  .pdtbl tr.ph td {
+    background: #5b6e82 !important; color: #fff !important;
+    padding: 2pt 3pt; font-weight: 700; font-size: 6pt;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .pdtbl tr.pch td {
+    background: #e8edf2 !important; padding: 1.2pt 3pt;
+    font-size: 5pt; font-weight: 700; text-transform: uppercase; color: #445060;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .pdtbl tr.pvr td { padding: 2pt 3pt; border-bottom: .2pt solid #dde3ea; vertical-align: middle; }
+  .pdtbl tr.pvr td.pv { font-weight: 700; color: #445668; font-size: 7.5pt; }
+  .pdtbl tr.pvr td.pr { font-weight: 700; color: #c0392b; font-size: 7.5pt; }
+  .pdtbl tr.pvr td.pm { color: #555; font-size: 5.5pt; }
+  .pdtbl tr.pvr td.pc { color: #445668; font-weight: 600; font-size: 5.5pt; }
+  .pitbl { width: 100%; border-collapse: collapse; font-size: 6pt; margin-bottom: 2pt; table-layout: fixed; }
+  .pitbl tr.ih td {
+    background: #5b6e82 !important; color: #fff !important;
+    padding: 2pt 3pt; font-size: 5.5pt; font-weight: 700;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .pitbl td { padding: 2pt 3pt; border-bottom: .2pt solid #dde3ea; vertical-align: middle; }
+  .pitbl td.ifn { font-weight: 700; font-size: 6.5pt; }
+  .pitbl td.ifr { font-size: 5pt; color: #888; }
+  .pitbl td.ifv { font-weight: 700; color: #445668; font-size: 7.5pt; }
+  .pitbl td.ifs { font-size: 5.5pt; line-height: 1.4; }
+  .pitbl td.ifc { font-size: 5.5pt; color: #445668; font-weight: 600; }
+  .pitbl td.ifrt { font-size: 5.5pt; line-height: 1.4; }
+  .cvpnote { font-size: 5pt; color: #666; border-top: .3pt solid #ccc; padding-top: 1.5pt; margin-top: 2pt; line-height: 1.5; }
+  .sigrow { display: flex !important; gap: 8pt; margin-top: 5pt; font-size: 5.5pt; border-top: .4pt solid #888; padding-top: 3pt; }
+  .sigrow span { flex: 1; }
+  .induction-only .right-col { display: none !important; }
+  .inotrope-only .left-col { display: none !important; }
+}
+.print-only, .print-hdr, .pt-row, .pgrid, .sigrow { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     PIN LOCK SCREEN
+══════════════════════════════════════ -->
+<div id="pin-screen">
+  <div class="pin-logo">
+    小兒麻醉藥物計算機
+    <small>Pediatric Cardiac Surgery · Open Heart</small>
+  </div>
+  <div class="pin-title">請輸入密碼</div>
+
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+  </div>
+
+  <div class="pin-pad">
+    <button class="pin-key" onclick="pinInput('1')">1</button>
+    <button class="pin-key" onclick="pinInput('2')">2</button>
+    <button class="pin-key" onclick="pinInput('3')">3</button>
+    <button class="pin-key" onclick="pinInput('4')">4</button>
+    <button class="pin-key" onclick="pinInput('5')">5</button>
+    <button class="pin-key" onclick="pinInput('6')">6</button>
+    <button class="pin-key" onclick="pinInput('7')">7</button>
+    <button class="pin-key" onclick="pinInput('8')">8</button>
+    <button class="pin-key" onclick="pinInput('9')">9</button>
+    <div class="pin-key key-empty"></div>
+    <button class="pin-key" onclick="pinInput('0')">0</button>
+    <button class="pin-key key-del" onclick="pinDel()">⌫</button>
+  </div>
+
+  <div class="pin-error-msg" id="pin-error"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="app-wrap">
+
+<!-- Confirm overlay -->
+<div class="overlay" id="overlay" style="display:none" onclick="cancelConfirm()">
+  <div class="overlay-box" onclick="event.stopPropagation()">
+    <div class="overlay-title" id="ov-title"></div>
+    <div class="overlay-body" id="ov-body"></div>
+    <div class="overlay-btns">
+      <button class="btn-cancel" onclick="cancelConfirm()">取消</button>
+      <button class="btn-ok" onclick="okConfirm()">確認給藥</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print-only -->
+<div class="print-only">
+  <div class="print-hdr">【小兒麻醉藥物計算機】Open Heart Drug List</div>
+  <div class="pt-row" id="pt-row">
+    <div class="pf"><b>姓名</b><span id="p-name"></span></div>
+    <div class="pf"><b>年齡</b><span id="p-age"></span></div>
+    <div class="pf"><b>診斷</b><span id="p-dx"></span></div>
+    <div class="pf"><b>手術</b><span id="p-op"></span></div>
+    <div class="pf"><b>體重</b><span id="p-wt"></span> kg</div>
+    <div class="pf"><b>時間</b><span id="p-time"></span></div>
+  </div>
+  <div class="pgrid" id="pgrid">
+    <div class="left-col" id="print-left"></div>
+    <div class="right-col" id="print-right"></div>
+  </div>
+</div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-title">
+    小兒麻醉藥物計算機
+    <small>Pediatric Cardiac Surgery · Open Heart</small>
+  </div>
+  <div class="topbar-badge">CRRT</div>
+</div>
+
+<!-- Input strip -->
+<div class="input-strip">
+  <div class="wt-group">
+    <label>體重</label>
+    <input type="number" id="weight" min="0.5" max="80" step="0.1" placeholder="kg" inputmode="decimal">
+  </div>
+  <div class="wt-group">
+    <label>年齡</label>
+    <input type="number" id="pt-age-val" min="0" max="200" step="1" placeholder="數值" inputmode="numeric" style="width:72px">
+  </div>
+  <div class="wt-group">
+    <label>&nbsp;</label>
+    <select id="pt-age-unit" style="width:68px">
+      <option value="month">個月</option>
+      <option value="year">歲</option>
+    </select>
+  </div>
+  <button class="calc-btn" onclick="calculate()">計算</button>
+</div>
+
+<!-- Warning bar -->
+<div class="warn-bar" id="warn-bar"></div>
+
+<!-- Mult picker -->
+<div class="mult-bar" id="mult-bar">
+  <div class="mult-bar-label">10–20 kg：請先詢問醫師選擇強心藥倍數</div>
+  <div class="mult-btns">
+    <button class="mult-btn" id="mult-btn-2" onclick="selectMult(2)">2X</button>
+    <button class="mult-btn" id="mult-btn-4" onclick="selectMult(4)">4X</button>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab active" id="tab-induction" onclick="showTab('induction')">誘導藥</div>
+  <div class="tab" id="tab-bypass" onclick="showTab('bypass')">Bypass</div>
+  <div class="tab" id="tab-inotrope" onclick="showTab('inotrope')">強心藥</div>
+  <div class="tab" id="tab-info" onclick="showTab('info')">資訊</div>
+</div>
+
+<!-- Main scroll -->
+<div class="main-scroll">
+  <div class="tab-section active" id="sec-induction">
+    <div class="empty-state" id="empty-induction">
+      <div class="empty-icon"><img src="khalil.png" style="width:120px;height:120px;object-fit:contain;opacity:.85"></div>
+      <div class="empty-text">輸入體重後按「計算」</div>
+    </div>
+    <div class="drug-list" id="list-induction" style="display:none"></div>
+  </div>
+  <div class="tab-section" id="sec-bypass">
+    <div class="empty-state" id="empty-bypass">
+      <div class="empty-icon"><img src="khalil.png" style="width:120px;height:120px;object-fit:contain;opacity:.85"></div>
+      <div class="empty-text">輸入體重後按「計算」</div>
+    </div>
+    <div class="drug-list" id="list-bypass" style="display:none"></div>
+    <div id="calc-tools" style="display:none;padding:0 0 8px">
+      <div class="calc-section-divider">輔助計算</div>
+      <div class="calc-card">
+        <div class="calc-card-header">
+          <div class="calc-card-title">NaHCO₃（樂麗康）</div>
+          <div class="calc-card-sub">70 mg/mL = 0.833 mEq/mL</div>
+        </div>
+        <div class="calc-input-row">
+          <div class="calc-input-group">
+            <label>Base Deficit</label>
+            <input type="number" id="bicarb-bd" placeholder="BD" inputmode="decimal" step="0.1">
+          </div>
+          <div class="calc-input-group">
+            <label>目標 HCO₃⁻</label>
+            <input type="number" id="bicarb-target" placeholder="mEq/L" inputmode="decimal" step="0.1" value="24">
+          </div>
+          <div class="calc-input-group">
+            <label>實際 HCO₃⁻</label>
+            <input type="number" id="bicarb-actual" placeholder="mEq/L" inputmode="decimal" step="0.1">
+          </div>
+          <button class="calc-go-btn" onclick="calcBicarb()">計算</button>
+        </div>
+        <div class="calc-result-area" id="bicarb-result" style="display:none"></div>
+      </div>
+      <div class="calc-card" style="margin-top:10px">
+        <div class="calc-card-header">
+          <div class="calc-card-title">Ca²⁺ 補充</div>
+          <div class="calc-card-sub">CaCl₂ 10% = 100 mg/mL　|　Ca Gluconate 10% = 100 mg/mL</div>
+        </div>
+        <div class="calc-input-row">
+          <div class="calc-input-group" style="max-width:120px">
+            <label>適應症</label>
+            <select id="ca-indication" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--ink);font-family:inherit;font-size:13px;padding:7px 8px;outline:none;width:100%">
+              <option value="lcos">低心輸出量</option>
+              <option value="hypo">低血鈣補充</option>
+            </select>
+          </div>
+          <button class="calc-go-btn" onclick="calcCalcium()">計算</button>
+        </div>
+        <div class="calc-result-area" id="calcium-result" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-section" id="sec-inotrope">
+    <div class="empty-state" id="empty-inotrope">
+      <div class="empty-icon"><img src="khalil.png" style="width:120px;height:120px;object-fit:contain;opacity:.85"></div>
+      <div class="empty-text">輸入體重後按「計算」</div>
+    </div>
+    <div id="list-inotrope" style="display:none"></div>
+  </div>
+  <div class="tab-section" id="sec-info">
+    <div class="empty-state" id="empty-info">
+      <div class="empty-icon"><img src="khalil.png" style="width:120px;height:120px;object-fit:contain;opacity:.85"></div>
+      <div class="empty-text">輸入體重後按「計算」</div>
+    </div>
+    <div id="list-info" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Print bar -->
+<div class="print-bar">
+  <button onclick="doPrint('induction')">列印誘導藥</button>
+  <button onclick="doPrint('inotrope')">列印強心藥</button>
+  <button class="btn-all" onclick="doPrint('all')">列印全部</button>
+</div>
+
+</div><!-- /#app-wrap -->
+
+<script>
+/* ════════════════════════════════════════════
+   PIN LOCK LOGIC
+════════════════════════════════════════════ */
+const CORRECT_PIN = '3232';
+let pinBuffer = '';
+
+function pinInput(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updateDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(checkPin, 80); // 短暫延遲讓最後一顆點亮起
+  }
+}
+
+function pinDel() {
+  if (pinBuffer.length === 0) return;
+  pinBuffer = pinBuffer.slice(0, -1);
+  updateDots();
+  document.getElementById('pin-error').textContent = '';
+}
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot-' + i);
+    dot.classList.toggle('filled', i < pinBuffer.length);
+    dot.classList.remove('error');
+  }
+}
+
+function checkPin() {
+  if (pinBuffer === CORRECT_PIN) {
+    // 解鎖：PIN 畫面淡出，app 淡入
+    document.getElementById('pin-screen').classList.add('unlocked');
+    document.getElementById('app-wrap').classList.add('visible');
+  } else {
+    // 錯誤：紅色 + 抖動
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('dot-' + i).classList.add('error');
+    }
+    const dotsEl = document.getElementById('pin-dots');
+    dotsEl.classList.add('shake');
+    document.getElementById('pin-error').textContent = '密碼錯誤，請再試一次';
+    setTimeout(() => {
+      dotsEl.classList.remove('shake');
+      pinBuffer = '';
+      updateDots();
+    }, 500);
+  }
+}
+
+// 鍵盤支援（數字鍵 + Backspace）
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('pin-screen').classList.contains('unlocked')) return;
+  if (e.key >= '0' && e.key <= '9') pinInput(e.key);
+  if (e.key === 'Backspace') pinDel();
+});
+
+/* ════════════════════════════════════════════
+   ORIGINAL APP JAVASCRIPT (unchanged)
+════════════════════════════════════════════ */
+function r1(v){ return isFinite(v)?(Math.round(v*10)/10).toFixed(1):'—' }
+function r2(v){ return isFinite(v)?(Math.round(v*100)/100).toFixed(2):'—' }
+function r0(v){ return isFinite(v)?Math.round(v).toString():'—' }
+function rAuto(v){ return isFinite(v)?(Math.abs(v)<0.1?(Math.round(v*1000)/1000).toFixed(3):r1(v)):'—' }
+function getNS(wt, multOverride){
+  if(wt<5)  return{ns:20,mult:5,needsPick:false};
+  if(wt<10) return{ns:25,mult:4,needsPick:false};
+  if(wt<20){
+    const m = multOverride||null;
+    const ns = m===4 ? 25 : 50;
+    return{ns, mult:m, needsPick:true};
+  }
+  return{ns:50,mult:2,needsPick:false};
+}
+function showTab(id) {
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+let openDrug = null;
+function toggleDrug(id) {
+  const btn  = document.getElementById('btn-'+id);
+  const card = document.getElementById('card-'+id);
+  if (!btn||!card) return;
+  const isOpen = btn.classList.contains('open');
+  document.querySelectorAll('.drug-btn.open').forEach(b=>b.classList.remove('open'));
+  document.querySelectorAll('.drug-expand.open').forEach(c=>c.classList.remove('open'));
+  if (!isOpen) { btn.classList.add('open'); card.classList.add('open'); openDrug = id; }
+  else { openDrug = null; }
+}
+function makeDrugBtn(id, name, conc, dose, isDanger, html) {
+  return `
+  <div>
+    <button class="drug-btn${isDanger?' danger-btn':''}" id="btn-${id}" onclick="toggleDrug('${id}')">
+      <div class="drug-btn-left">
+        <div class="drug-btn-name">${name}</div>
+        <div class="drug-btn-sub">${conc}</div>
+      </div>
+      <div class="drug-btn-dose">${dose}</div>
+      <div class="drug-btn-arrow">›</div>
+    </button>
+    <div class="drug-expand" id="card-${id}">${html}</div>
+  </div>`;
+}
+function cardNoDil(mlStr, amtStr, unit, noteHtml='') {
+  return `
+    <div class="card-tag">不稀釋　直接抽取</div>
+    <div class="card-values">
+      <div class="card-val-cell">
+        <div class="val-label">抽取量</div>
+        <div class="val-num">${mlStr}</div>
+        <div class="val-unit">mL　(${amtStr} ${unit})</div>
+      </div>
+    </div>
+    ${noteHtml?`<div class="card-note">${noteHtml}</div>`:''}`;
+}
+function cardRed(mlStr, amtStr, unit, noteHtml='') {
+  return `
+    <div class="card-tag warn">不稀釋　⚠ 高警訊藥物</div>
+    <div class="card-values">
+      <div class="card-val-cell">
+        <div class="val-label">抽取量</div>
+        <div class="val-num red">${mlStr}</div>
+        <div class="val-unit">mL　(${amtStr} ${unit})</div>
+      </div>
+    </div>
+    ${noteHtml?`<div class="card-note">${noteHtml}</div>`:''}`;
+}
+function cardInotrope(name, rangeStr, xFactor, drugConc, ns, wt, minRate, maxRate, roleTag, noteLines, startNote) {
+  const targetMg    = xFactor * wt;
+  const drugMl      = targetMg / drugConc;
+  const addNsMl     = ns - drugMl;
+  const finalConcMcg= targetMg * 1000 / ns;
+  const ratePerMl   = finalConcMcg / 60 / wt;
+  const loMl        = minRate / ratePerMl;
+  const hiMl        = maxRate / ratePerMl;
+  const xStr        = xFactor + '×';
+  const id          = name.replace(/[^a-zA-Z]/g,'').toLowerCase();
+  const roleHtml    = roleTag ? `<div class="ino-role-tag">${roleTag}</div>` : '';
+  const startHtml   = startNote ? `<div class="card-note" style="border-bottom:1px solid var(--border);padding-bottom:8px"><span style="color:var(--teal);font-weight:700">起始：</span>${startNote}</div>` : '';
+  const noteHtml    = noteLines && noteLines.length ? `<div class="ino-warn-note">${noteLines.map(n=>`<div class="ino-warn-line">⚠ ${n}</div>`).join('')}</div>` : '';
+  const html = `
+    ${roleHtml}
+    <div class="ino-formula">${xStr} × ${wt} kg = <b>${r1(targetMg)} mg</b> → NS ${ns} mL</div>
+    <div class="card-values">
+      <div class="card-val-cell">
+        <div class="val-label">抽取藥液</div>
+        <div class="val-num">${rAuto(drugMl)}</div>
+        <div class="val-unit">mL</div>
+      </div>
+      <div class="card-val-cell">
+        <div class="val-label">加入 NS</div>
+        <div class="val-num">${r1(addNsMl)}</div>
+        <div class="val-unit">mL　共 ${ns} mL</div>
+      </div>
+      <div class="card-val-cell">
+        <div class="val-label">最終濃度</div>
+        <div class="val-num" style="font-size:18px">${r1(finalConcMcg)}</div>
+        <div class="val-unit">mcg/mL</div>
+      </div>
+    </div>
+    <div class="card-rate">
+      <div class="rate-cell">
+        <div class="rate-label">1 mL/hr =</div>
+        <div class="rate-num">${rAuto(ratePerMl)}</div>
+        <div class="rate-unit">mcg/kg/min</div>
+      </div>
+      <div class="rate-cell">
+        <div class="rate-label">最低 ${minRate}</div>
+        <div class="rate-num">${rAuto(loMl)}</div>
+        <div class="rate-unit">mL/hr</div>
+      </div>
+      <div class="rate-cell">
+        <div class="rate-label">最高 ${maxRate}</div>
+        <div class="rate-num">${rAuto(hiMl)}</div>
+        <div class="rate-unit">mL/hr</div>
+      </div>
+    </div>
+    ${startHtml}
+    ${noteHtml}`;
+  return makeDrugBtn('ino-'+id, name, drugConc+' mg/mL', rangeStr, false, html);
+}
+if(!window.dilState) window.dilState={};
+function dilToggle(id, mode) {
+  window.dilState[id] = mode;
+  const card = document.getElementById('card-'+id);
+  if(!card) return;
+  card.querySelectorAll('.dil-toggle-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.mode===mode);
+  });
+  const body = card.querySelector('.dil-body');
+  if(body) body.innerHTML = getDilBody(id, mode);
+}
+function getDilBody(id, mode) {
+  const d = window.dilData || {};
+  if(id==='fet') {
+    if(mode==='dil') return `
+      <div class="card-step"><div class="step-num">稀</div><div>0.2 mL 藥 + NS 0.8 mL → <b style="color:var(--teal)">10 mcg/mL</b>（共 1 mL）</div></div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">從 10 mcg/mL 抽取</div>
+        <div class="val-num">${d.fetLoD}–${d.fetHiD}</div>
+        <div class="val-unit">mL　(${d.fetLoMcg}–${d.fetHiMcg} mcg)</div>
+      </div></div>`;
+    else return `
+      <div class="card-tag">不稀釋　直接從 50 mcg/mL 抽取</div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">抽取量</div>
+        <div class="val-num">${d.fetLoR}–${d.fetHiR}</div>
+        <div class="val-unit">mL　(${d.fetLoMcg}–${d.fetHiMcg} mcg)</div>
+      </div></div>`;
+  }
+  if(id==='ket') {
+    if(mode==='dil') return `
+      <div class="card-step"><div class="step-num">稀</div><div>0.2 mL 藥 + NS 0.8 mL → <b style="color:var(--teal)">10 mg/mL</b>（共 1 mL）</div></div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">從 10 mg/mL 抽取</div>
+        <div class="val-num">${d.ketLoD}–${d.ketHiD}</div>
+        <div class="val-unit">mL　(${d.ketLoMg}–${d.ketHiMg} mg)</div>
+      </div></div>`;
+    else return `
+      <div class="card-tag">不稀釋　直接從 50 mg/mL 抽取</div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">抽取量</div>
+        <div class="val-num">${d.ketLoR}–${d.ketHiR}</div>
+        <div class="val-unit">mL　(${d.ketLoMg}–${d.ketHiMg} mg)</div>
+      </div></div>`;
+  }
+  if(id==='rob') {
+    if(mode==='dil') return `
+      <div class="card-step"><div class="step-num">稀</div><div>0.5 mL 藥 + NS 0.5 mL → <b style="color:var(--teal)">0.1 mg/mL</b>（共 1 mL）</div></div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">從稀釋液抽取</div>
+        <div class="val-num">${d.robDilMl}</div>
+        <div class="val-unit">mL　(= ${d.robMg} mg)</div>
+      </div></div>`;
+    else return `
+      <div class="card-tag">不稀釋　直接從 0.2 mg/mL 抽取</div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">抽取量</div>
+        <div class="val-num">${d.robRawMl}</div>
+        <div class="val-unit">mL　(= ${d.robMg} mg)</div>
+      </div></div>`;
+  }
+  if(id==='cit') {
+    if(mode==='dil') return `
+      <div class="card-step"><div class="step-num">1</div><div>原瓶加入 NS <b>10 mL</b> → <b style="color:var(--teal)">100 mg/mL</b> 原液</div></div>
+      <div class="card-step"><div class="step-num">2</div><div>取 <b>1 mL</b>（100 mg/mL）+ NS <b>9 mL</b> → <b style="color:var(--teal)">10 mg/mL</b>（共 10 mL）</div></div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">從 10 mg/mL 抽取</div>
+        <div class="val-num">${d.citLoD}–${d.citHiD}</div>
+        <div class="val-unit">mL　(${d.citLoMg}–${d.citHiMg} mg)</div>
+      </div></div>
+      <div class="card-note">每次手術前現配</div>`;
+    else return `
+      <div class="card-step"><div class="step-num">1</div><div>原瓶加入 NS <b>10 mL</b> → <b style="color:var(--teal)">100 mg/mL</b> 原液</div></div>
+      <div class="card-tag" style="margin-top:0">不做第二步稀釋　直接從 100 mg/mL 抽取</div>
+      <div class="card-values"><div class="card-val-cell">
+        <div class="val-label">從 100 mg/mL 抽取</div>
+        <div class="val-num">${d.citLoR}–${d.citHiR}</div>
+        <div class="val-unit">mL　(${d.citLoMg}–${d.citHiMg} mg)</div>
+      </div></div>
+      <div class="card-note">每次手術前現配</div>`;
+  }
+  return '';
+}
+function selectMult(m){
+  document.getElementById('mult-bar').dataset.mult=m;
+  [2,4].forEach(x=>{
+    const b=document.getElementById('mult-btn-'+x);
+    if(b) b.className='mult-btn'+(x===m?' selected':'');
+  });
+  calculate();
+}
+function calcBicarb() {
+  const wt = parseFloat(document.getElementById('weight').value);
+  if(isNaN(wt)||wt<=0){ alert('請先輸入體重並按計算'); return; }
+  const bd = parseFloat(document.getElementById('bicarb-bd').value);
+  const target = parseFloat(document.getElementById('bicarb-target').value);
+  const actual = parseFloat(document.getElementById('bicarb-actual').value);
+  const CONC = 0.833;
+  let html = '';
+  let hasResult = false;
+  if(!isNaN(bd) && bd > 0) {
+    hasResult = true;
+    const meq1 = wt * bd * 0.3;
+    const ml1  = meq1 / CONC;
+    const halfMl1 = ml1 / 2;
+    html += `
+      <div class="calc-formula-label" style="padding:4px 2px 2px;font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">公式一　wt × BD × 0.3</div>
+      <div class="calc-formula-row">
+        <div class="calc-formula-cell"><div class="calc-formula-label">總需求</div><div class="calc-formula-num">${r1(meq1)}</div><div class="calc-formula-unit">mEq</div></div>
+        <div class="calc-formula-cell"><div class="calc-formula-label">抽取樂麗康</div><div class="calc-formula-num">${r1(ml1)}</div><div class="calc-formula-unit">mL（全量）</div></div>
+        <div class="calc-formula-cell"><div class="calc-formula-label">先給一半</div><div class="calc-formula-num">${r1(halfMl1)}</div><div class="calc-formula-unit">mL</div></div>
+      </div>`;
+  }
+  if(!isNaN(target) && !isNaN(actual) && target > actual) {
+    hasResult = true;
+    const meq2 = wt * (target - actual) * 0.5;
+    const ml2  = meq2 / CONC;
+    const halfMl2 = ml2 / 2;
+    html += `
+      <div class="calc-formula-label" style="padding:${hasResult&&!isNaN(bd)&&bd>0?'10px':'4px'} 2px 2px;font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">公式二　wt ×（目標 − 實際 HCO₃⁻）× 0.5</div>
+      <div class="calc-formula-row">
+        <div class="calc-formula-cell"><div class="calc-formula-label">總需求</div><div class="calc-formula-num">${r1(meq2)}</div><div class="calc-formula-unit">mEq</div></div>
+        <div class="calc-formula-cell"><div class="calc-formula-label">抽取樂麗康</div><div class="calc-formula-num">${r1(ml2)}</div><div class="calc-formula-unit">mL（全量）</div></div>
+        <div class="calc-formula-cell"><div class="calc-formula-label">先給一半</div><div class="calc-formula-num">${r1(halfMl2)}</div><div class="calc-formula-unit">mL</div></div>
+      </div>`;
+  }
+  const meq3Lo = wt * 2, meq3Hi = wt * 5;
+  const ml3Lo = r1(meq3Lo / CONC), ml3Hi = r1(meq3Hi / CONC);
+  html += `
+    <div class="calc-formula-label" style="padding:${hasResult?'10px':'4px'} 2px 2px;font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">公式三　FDA 經驗性劑量（無血氣時參考）</div>
+    <div class="calc-formula-row">
+      <div class="calc-formula-cell"><div class="calc-formula-label">劑量範圍</div><div class="calc-formula-num" style="font-size:18px">${r1(meq3Lo)}–${r1(meq3Hi)}</div><div class="calc-formula-unit">mEq（2–5 mEq/kg）</div></div>
+      <div class="calc-formula-cell"><div class="calc-formula-label">抽取樂麗康</div><div class="calc-formula-num" style="font-size:18px">${ml3Lo}–${ml3Hi}</div><div class="calc-formula-unit">mL<br>於 4–8 hr 內給予</div></div>
+    </div>`;
+  html += `
+    <div class="calc-half-note">建議先給計算量的一半，複查血氣後再調整</div>
+    <div class="calc-warn-note">
+      ⚠ 樂麗康為高張溶液，避免快速推注（&lt;2歲：≤8 mEq/kg/day）<br>
+      ⚠ 不可與含鈣溶液同一管路輸注<br>
+      ⚠ 矯正過度可能導致代謝性鹼中毒，請監測血氣<br>
+      ⚠ 心跳停止時不建議常規使用（2025 AHA/AAP Class 3）<br>
+      <span style="color:var(--teal);font-weight:600">★ 肺動脈高壓危象：誘導鹼血症可作為肺血管擴張劑給藥前的過渡措施（2025 AHA/AAP Class 2a）</span>
+    </div>`;
+  const res = document.getElementById('bicarb-result');
+  res.innerHTML = html;
+  res.style.display = 'block';
+}
+function calcCalcium() {
+  const wt = parseFloat(document.getElementById('weight').value);
+  if(isNaN(wt)||wt<=0){ alert('請先輸入體重並按計算'); return; }
+  const indication = document.getElementById('ca-indication').value;
+  const cacl2Lo = wt * 10, cacl2Hi = wt * 20;
+  const caglucLo = wt * 30, caglucHi = wt * 60;
+  const cacl2LoMl = r1(cacl2Lo / 100), cacl2HiMl = r1(cacl2Hi / 100);
+  const caglucLoMl = r1(caglucLo / 100), caglucHiMl = r1(caglucHi / 100);
+  const indicationNote = indication === 'lcos' ? '低心輸出量 / 術後心肌支持' : '低血鈣補充（iCa &lt; 1.1 mmol/L）';
+  const html = `
+    <div class="calc-formula-label" style="padding:4px 2px 4px;font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">適應症：${indicationNote}</div>
+    <div class="calc-formula-row">
+      <div class="calc-formula-cell">
+        <div class="calc-formula-label">CaCl₂ 10%<br><span style="font-weight:400;font-size:9px">10–20 mg/kg</span></div>
+        <div class="calc-formula-num" style="font-size:18px">${cacl2LoMl}–${cacl2HiMl}</div>
+        <div class="calc-formula-unit">mL<br>(${r0(cacl2Lo)}–${r0(cacl2Hi)} mg)</div>
+      </div>
+      <div class="calc-formula-cell">
+        <div class="calc-formula-label">Ca Gluconate 10%<br><span style="font-weight:400;font-size:9px">30–60 mg/kg</span></div>
+        <div class="calc-formula-num" style="font-size:18px">${caglucLoMl}–${caglucHiMl}</div>
+        <div class="calc-formula-unit">mL<br>(${r0(caglucLo)}–${r0(caglucHi)} mg)</div>
+      </div>
+    </div>
+    <div class="calc-half-note">CaCl₂ 產生較高離子鈣濃度，建議優先選用（中心靜脈給藥）<br>Ca Gluconate 滲透壓較低，適合周邊靜脈或新生兒</div>
+    <div class="calc-warn-note">
+      ⚠ 心跳停止時，除非有記錄的低血鈣、高鎂、高鉀，否則不建議給鈣<br>
+      ⚠ 不可與 NaHCO₃ 同一管路混合輸注（產生沉澱）<br>
+      ⚠ 緩慢靜注，監測心率與血壓
+    </div>`;
+  const res = document.getElementById('calcium-result');
+  res.innerHTML = html;
+  res.style.display = 'block';
+}
+function calculate(){
+  const wt=parseFloat(document.getElementById('weight').value);
+  if(isNaN(wt)||wt<=0){alert('請輸入有效體重');return}
+  document.getElementById('p-wt').textContent=wt;
+  document.getElementById('p-time').textContent=new Date().toLocaleString('zh-TW',{hour12:false});
+  const ageVal=parseFloat(document.getElementById('pt-age-val').value);
+  const ageUnit=document.getElementById('pt-age-unit').value;
+  const ageMonths=isNaN(ageVal)?null:(ageUnit==='year'?ageVal*12:ageVal);
+  const ageStr=isNaN(ageVal)?'—':(ageUnit==='year'?ageVal+'歲':ageVal+'個月');
+  document.getElementById('p-age').textContent=ageStr;
+  const warnEl=document.getElementById('warn-bar');
+  let warnMsg='';
+  if(ageMonths!==null){
+    const ranges=[
+      {maxMo:1,lo:2,hi:5},{maxMo:6,lo:3,hi:9},{maxMo:12,lo:5,hi:12},
+      {maxMo:24,lo:7,hi:15},{maxMo:60,lo:10,hi:24},{maxMo:120,lo:14,hi:38},{maxMo:999,lo:22,hi:65}
+    ];
+    const range=ranges.find(r=>ageMonths<=r.maxMo);
+    if(range&&(wt<range.lo||wt>range.hi))
+      warnMsg=`⚠ 體重 ${wt} kg 與年齡 ${ageStr} 常見範圍（${range.lo}–${range.hi} kg）不符，請確認。`;
+  }
+  warnEl.textContent=warnMsg;
+  warnEl.className='warn-bar'+(warnMsg?' show':'');
+  const cvp=wt<5?'4 Fr':wt>10?'5 Fr':'請確認（詢問）';
+  const pickedMult=parseInt(document.getElementById('mult-bar')?.dataset?.mult||'0')||null;
+  const {ns,mult,needsPick}=getNS(wt,pickedMult);
+  const multBar=document.getElementById('mult-bar');
+  if(needsPick){
+    multBar.classList.add('show');
+    [2,4].forEach(m=>{
+      const b=document.getElementById('mult-btn-'+m);
+      if(b) b.className='mult-btn'+(m===pickedMult?' selected':'');
+    });
+    if(!pickedMult){
+      ['induction','bypass','inotrope','info'].forEach(t=>{
+        const emp=document.getElementById('empty-'+t);
+        const lst=document.getElementById('list-'+t);
+        if(emp){emp.style.display='block';emp.querySelector('.empty-text').textContent='請先選擇強心藥倍數';}
+        if(lst) lst.style.display='none';
+      });
+      return;
+    }
+  } else {
+    multBar.classList.remove('show');
+    if(multBar) multBar.dataset.mult='';
+  }
+  const atrMg=0.01*wt, atrDrawMl=r2(atrMg/1);
+  const fetLoMcg=1*wt, fetHiMcg=3*wt;
+  const fetLoDrawMl_dil=r1(fetLoMcg/10),  fetHiDrawMl_dil=r1(fetHiMcg/10);
+  const fetLoDrawMl_raw=r1(fetLoMcg/50),  fetHiDrawMl_raw=r1(fetHiMcg/50);
+  const ketLoMg=1*wt, ketHiMg=3*wt;
+  const ketLoDrawMl_dil=r1(ketLoMg/10),   ketHiDrawMl_dil=r1(ketHiMg/10);
+  const ketLoDrawMl_raw=r1(ketLoMg/50),   ketHiDrawMl_raw=r1(ketHiMg/50);
+  const robMg=r2(0.004*wt);
+  const robDrawMl_dil=r2(0.004*wt/0.1);
+  const robDrawMl_raw=r2(0.004*wt/0.2);
+  const citLoMg=2*wt, citHiMg=5*wt;
+  const citLoDrawMl_dil=r1(citLoMg/10),   citHiDrawMl_dil=r1(citHiMg/10);
+  const citLoDrawMl_raw=r1(citLoMg/100),  citHiDrawMl_raw=r1(citHiMg/100);
+  const esILoMg=1*wt, esIHiMg=1.2*wt;
+  const esILoMl=r1(esILoMg/10), esIHiMl=r1(esIHiMg/10);
+  const nimMg=0.2*wt, nimDrawMl=r1(nimMg/2);
+  const hepIU=300*wt, hepMl=r1(hepIU/1000);
+  const dorLoMg=0.1*wt, dorHiMg=0.3*wt;
+  const dorLoMl=r1(dorLoMg), dorHiMl=r1(dorHiMg);
+  const esBMg=1*wt, esBMl=r1(esBMg/10);
+  const lasLoMg=0.5*wt, lasHiMg=1*wt;
+  const lasLoMl=r1(lasLoMg/10), lasHiMl=r1(lasHiMg/10);
+  const xyloMg=2*wt, xyloMl=r1(xyloMg/20);
+  const protMl=parseFloat(hepMl);
+  if(!window.dilState) window.dilState={};
+  ['fet','ket','rob','cit'].forEach(id=>{ if(!window.dilState[id]) window.dilState[id]='dil'; });
+  window.dilData = {
+    fetLoD:fetLoDrawMl_dil,fetHiD:fetHiDrawMl_dil,fetLoR:fetLoDrawMl_raw,fetHiR:fetHiDrawMl_raw,
+    fetLoMcg:r1(fetLoMcg),fetHiMcg:r1(fetHiMcg),
+    ketLoD:ketLoDrawMl_dil,ketHiD:ketHiDrawMl_dil,ketLoR:ketLoDrawMl_raw,ketHiR:ketHiDrawMl_raw,
+    ketLoMg:r1(ketLoMg),ketHiMg:r1(ketHiMg),
+    robDilMl:robDrawMl_dil,robRawMl:robDrawMl_raw,robMg,
+    citLoD:citLoDrawMl_dil,citHiD:citHiDrawMl_dil,citLoR:citLoDrawMl_raw,citHiR:citHiDrawMl_raw,
+    citLoMg:r1(citLoMg),citHiMg:r1(citHiMg),
+  };
+  function makeDilCard(id, initMode) {
+    return `
+      <div class="dil-toggle">
+        <button class="dil-toggle-btn${initMode==='dil'?' active':''}" data-mode="dil" onclick="dilToggle('${id}','dil')">稀釋版</button>
+        <button class="dil-toggle-btn${initMode==='raw'?' active':''}" data-mode="raw" onclick="dilToggle('${id}','raw')">不稀釋版</button>
+      </div>
+      <div class="dil-body">${getDilBody(id, initMode)}</div>`;
+  }
+  const indHtml = [
+    makeDrugBtn('atr','Atropine','1 mg/mL','0.01 mg/kg',false,cardNoDil(atrDrawMl,r2(atrMg),'mg')),
+    makeDrugBtn('fet','Fentanyl','50 mcg/mL','1–3 mcg/kg',false,makeDilCard('fet',window.dilState['fet'])),
+    makeDrugBtn('ket','Ketamine','50 mg/mL','1–3 mg/kg',false,makeDilCard('ket',window.dilState['ket'])),
+    makeDrugBtn('rob','Robinul','0.2 mg/mL','4 mcg/kg',false,makeDilCard('rob',window.dilState['rob'])),
+    makeDrugBtn('cit','Citosol（Thiopental）','1000 mg/vial','2–5 mg/kg',false,makeDilCard('cit',window.dilState['cit'])),
+    makeDrugBtn('esm','Esmeron（Induction）','10 mg/mL','1–1.2 mg/kg',false,cardNoDil(`${esILoMl}–${esIHiMl}`,`${r1(esILoMg)}–${r1(esIHiMg)}`,'mg')),
+    makeDrugBtn('nim','Nimbex（Cisatracurium）','2 mg/mL','0.2 mg/kg',false,cardNoDil(nimDrawMl,r1(nimMg),'mg')),
+  ].join('');
+  const bypHtml = [
+    makeDrugBtn('hep','Heparin','1000 IU/mL','300 IU/kg',true,cardRed(hepMl,r0(hepIU),'IU','點擊此卡片確認給藥')),
+    makeDrugBtn('dor','Dormicum（Midazolam）','1 mg/mL','0.1–0.3 mg/kg',false,cardNoDil(`${dorLoMl}–${dorHiMl}`,`${r1(dorLoMg)}–${r1(dorHiMg)}`,'mg')),
+    makeDrugBtn('esb','Esmeron（Bypass）','10 mg/mL','1 mg/kg',false,cardNoDil(esBMl,r1(esBMg),'mg')),
+    makeDrugBtn('las','Lasix（Furosemide）','10 mg/mL','0.5–1 mg/kg',false,cardNoDil(`${lasLoMl}–${lasHiMl}`,`${r1(lasLoMg)}–${r1(lasHiMg)}`,'mg')),
+    makeDrugBtn('xyl','2% Xylocaine（Clamp Off前）','20 mg/mL','2 mg/kg',false,cardNoDil(xyloMl,r1(xyloMg),'mg')),
+    makeDrugBtn('prot','Protamine（Off Pump）','10 mg/mL','= Heparin 抽取 mL × 1',true,cardRed(r1(protMl),`= Heparin ${hepMl} mL × 1`,'mL','緩慢靜注・監測血壓・分次給予')),
+  ].join('');
+  setTimeout(()=>{
+    const hBtn=document.getElementById('btn-hep');
+    if(hBtn){
+      hBtn.onclick=()=>{
+        toggleDrug('hep');
+        showConfirm('⚠ Heparin 給藥確認',
+          `<b>劑量：300 IU/kg</b><br>抽取：<span style="font-size:22px;font-weight:700;color:var(--red)">${hepMl} mL</span>（${r0(hepIU)} IU）<br><br>請再次確認劑量與病人資料後給藥。`);
+      };
+    }
+    const pBtn=document.getElementById('btn-prot');
+    if(pBtn){
+      pBtn.onclick=()=>{
+        toggleDrug('prot');
+        showConfirm('⚠ Protamine 給藥確認',
+          `<b>劑量：= Heparin 抽取量 × 1</b><br>抽取：<span style="font-size:22px;font-weight:700;color:var(--red)">${r1(protMl)} mL</span><br><br>請緩慢靜注並監測血壓。`);
+      };
+    }
+  }, 50);
+  const inoHtml = `
+    <div class="info-card">CVP：<b>${cvp}</b> &nbsp;|&nbsp; 強心藥：<b>${mult}X，${ns} mL NS</b></div>
+    <div class="drug-list">
+      ${cardInotrope('Dopamine','3–10 mcg/kg/min',6,40,ns,wt,3,10,'Vasopressor / Inotrope',
+        ['心律不整與死亡率較 Norepinephrine 高（SOAP II）','長期使用受體下調，療效遞減','低劑量腎保護效果未獲證實（ROSE AHF）'],null)}
+      ${cardInotrope('Dobutrex','2–20 mcg/kg/min',6,12.5,ns,wt,2,20,'Inotrope',
+        ['心律不整風險高，可能產生快速耐受性','低血壓時血管擴張效應可能使血壓更低','β-1 刺激導致心搏過速'],'起始 0.5–1 mcg/kg/min，依反應調整')}
+      ${cardInotrope('Isoket','0.2–5.0 mcg/kg/min',0.6,1,ns,wt,0.2,5.0,'Vasodilator',
+        ['過量導致低血壓、coronary steal','>2 mcg/kg/min 請確認臨床需求並告知醫師'],null)}
+      ${cardInotrope('Levophed','0.02–0.2 mcg/kg/min',0.06,1,ns,wt,0.02,0.2,'Vasopressor',
+        ['高劑量導致周邊缺血，監測肢端灌流','Extravasation 風險，建議中心靜脈給藥'],null)}
+      ${cardInotrope('Primacor','0.25–0.75 mcg/kg/min',0.6,1,ns,wt,0.25,0.75,'Inodilator',
+        ['強效血管擴張 → 低血壓風險（較 Dobutrex 更易發生）','血小板減少症（Thrombocytopenia）','腎功能差需減量，半衰期 1–4 hr 蓄積風險'],'起始 0.25 mcg/kg/min，緩慢滴定')}
+      ${cardInotrope('Epinephrine（Bosmin）','0.02–0.3 mcg/kg/min',0.06,1,ns,wt,0.02,0.3,'Inotrope / Vasopressor',
+        ['心律不整風險（高劑量尤甚）','乳酸上升，勿誤判為休克惡化','>0.1 mcg/kg/min α 效應為主，注意周邊灌流'],'低劑量（<0.05）以 β-2 為主，降低 SVR')}
+    </div>`;
+  const infoHtml = `
+    <div class="info-card"><b>CVP 建議尺寸</b><br>&lt;5 kg → 4 Fr<br>5–10 kg → 請確認<br>&gt;10 kg → 5 Fr</div>
+    <div class="info-card"><b>強心藥配製倍數</b><br>&lt;5 kg → 5X，20 mL NS<br>5–10 kg → 4X，25 mL NS<br>10–20 kg → 2X（50mL）或 4X（25mL）詢問醫師<br>&gt;20 kg → 2X，50 mL NS<br><br><b>目前：${mult}X，${ns} mL NS</b></div>
+    <div class="info-card"><b>臨床決策參考</b><br>血壓低（SVR 低）→ <b>Levophed</b><br>心收縮差 → <b>Epinephrine / Dobutrex</b><br>RV failure / 肺高壓 → <b>Primacor</b><br>Afterload 太高 → <b>Isoket</b><br><br><span style="color:var(--ink3);font-size:12px">Dopamine 已逐漸被取代，保留備用</span></div>
+    <div class="info-card"><b>藥物角色分類</b><br>Vasopressor：Levophed、Epinephrine（高劑量）<br>Inotrope：Epinephrine（低劑量）、Dobutrex<br>Inodilator：Primacor<br>Vasodilator：Isoket</div>
+    <div class="info-card"><b>泡製規則</b><br>溶液請使用 NS<br>先詢問醫師預將藥物泡入多少 CC 溶液</div>
+    <div class="info-card"><b>體重 ${wt} kg　年齡 ${ageStr}</b><br>計算時間：${new Date().toLocaleString('zh-TW',{hour12:false})}</div>`;
+  const sections=[
+    {empty:'empty-induction',list:'list-induction',html:indHtml},
+    {empty:'empty-bypass',   list:'list-bypass',   html:bypHtml},
+    {empty:'empty-inotrope', list:'list-inotrope', html:inoHtml},
+    {empty:'empty-info',     list:'list-info',     html:infoHtml},
+  ];
+  sections.forEach(s=>{
+    const e=document.getElementById(s.empty);
+    const l=document.getElementById(s.list);
+    if(e) e.style.display='none';
+    if(l){ l.innerHTML=s.html; l.style.display='block'; }
+  });
+  const ct=document.getElementById('calc-tools');
+  if(ct) ct.style.display='block';
+  ['bicarb-result','calcium-result'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  const thStyle='background:#445668;color:#fff;padding:2pt 3pt;font-size:5.5pt;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact';
+  function pdrowC(name,dose,dil,ml,amt,isDanger){
+    const c=isDanger?'#c0392b':'#445668';
+    return `<tr style="border-bottom:.4pt solid #c8d3de">
+      <td style="padding:1.8pt 3pt;font-size:5.8pt;font-weight:700;color:#1e2a35;word-break:keep-all">${name}</td>
+      <td style="padding:1.8pt 3pt;font-size:5.2pt;color:#555;white-space:nowrap">${dose}</td>
+      <td style="padding:1.8pt 3pt;font-size:4.8pt;color:#555;line-height:1.4">${dil}</td>
+      <td style="padding:1.8pt 3pt;font-size:7pt;font-weight:700;text-align:center;color:${c};white-space:nowrap">${ml} mL</td>
+      <td style="padding:1.8pt 3pt;font-size:5.2pt;color:#555">${amt}</td>
+    </tr>`;
+  }
+  function piRowC(name,range,xFactor,drugConc,ns,wt,lo,hi){
+    const tMg=xFactor*wt,dMl=tMg/drugConc,nMl=ns-dMl,fc=tMg*1000/ns,rpm=fc/60/wt;
+    return `<tr style="border-bottom:.4pt solid #c8d3de">
+      <td style="padding:2pt 3pt;font-size:6pt;font-weight:700;color:#1e2a35">${name}</td>
+      <td style="padding:2pt 3pt;font-size:5pt;color:#555">${range}</td>
+      <td style="padding:2pt 3pt;font-size:6.5pt;font-weight:700;color:#445668">${r1(tMg)} mg</td>
+      <td style="padding:2pt 3pt;font-size:5.2pt;line-height:1.5;color:#555">藥 <b style="color:#1e2a35">${rAuto(dMl)} mL</b><br>NS <b style="color:#1e2a35">${r1(nMl)} mL</b></td>
+      <td style="padding:2pt 3pt;font-size:5.2pt;color:#445668;font-weight:600">${r1(fc)} mcg/mL</td>
+      <td style="padding:2pt 3pt;font-size:5pt;line-height:1.5">1ml=${rAuto(rpm)}<br><b>${rAuto(lo/rpm)}–${rAuto(hi/rpm)}</b> ml/hr</td>
+    </tr>`;
+  }
+  const dFet=window.dilState['fet']==='dil'?'0.2藥+0.8NS→10mcg/mL':'不稀釋';
+  const dKet=window.dilState['ket']==='dil'?'0.2藥+0.8NS→10mg/mL':'不稀釋';
+  const dRob=window.dilState['rob']==='dil'?'0.5藥+0.5NS→0.1mg/mL':'不稀釋';
+  const dCit=window.dilState['cit']==='dil'?'+10mLNS→100mg/mL，取1mL+9mLNS→10mg/mL（共10mL）':'+10mLNS→100mg/mL（不做第二步）';
+  const mFet=window.dilState['fet']==='dil'?`${fetLoDrawMl_dil}–${fetHiDrawMl_dil}`:`${fetLoDrawMl_raw}–${fetHiDrawMl_raw}`;
+  const mKet=window.dilState['ket']==='dil'?`${ketLoDrawMl_dil}–${ketHiDrawMl_dil}`:`${ketLoDrawMl_raw}–${ketHiDrawMl_raw}`;
+  const mRob=window.dilState['rob']==='dil'?robDrawMl_dil:robDrawMl_raw;
+  const mCit=window.dilState['cit']==='dil'?`${citLoDrawMl_dil}–${citHiDrawMl_dil}`:`${citLoDrawMl_raw}–${citHiDrawMl_raw}`;
+  const printLeft=`
+    <div class="psec">Induction Drugs &amp; Bypass / Off Pump　體重 ${wt} kg</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <colgroup><col style="width:21%"><col style="width:13%"><col style="width:27%"><col style="width:14%"><col style="width:25%"></colgroup>
+      <tr><td style="${thStyle}">藥物</td><td style="${thStyle}">劑量</td><td style="${thStyle}">稀釋方式</td><td style="${thStyle}">抽取 mL</td><td style="${thStyle}">給藥量</td></tr>
+      <tr><td style="background:#d0d8e4;color:#1e2a35;padding:1.5pt 3pt;font-size:5pt;font-weight:700;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact" colspan="5">Induction</td></tr>
+      ${pdrowC('Atropine 1mg/mL','0.01 mg/kg','不稀釋',atrDrawMl,r2(atrMg)+' mg',false)}
+      ${pdrowC('Fentanyl 50mcg/mL','1–3 mcg/kg',dFet,mFet,r1(fetLoMcg)+'–'+r1(fetHiMcg)+' mcg',false)}
+      ${pdrowC('Ketamine 50mg/mL','1–3 mg/kg',dKet,mKet,r1(ketLoMg)+'–'+r1(ketHiMg)+' mg',false)}
+      ${pdrowC('Robinul 0.2mg/mL','4 mcg/kg',dRob,mRob,robMg+' mg',false)}
+      ${pdrowC('Citosol 1000mg/vial','2–5 mg/kg',dCit,mCit,r1(citLoMg)+'–'+r1(citHiMg)+' mg',false)}
+      ${pdrowC('Esmeron(Ind) 10mg/mL','1–1.2 mg/kg','不稀釋',esILoMl+'–'+esIHiMl,r1(esILoMg)+'–'+r1(esIHiMg)+' mg',false)}
+      ${pdrowC('Nimbex 2mg/mL','0.2 mg/kg','不稀釋',nimDrawMl,r1(nimMg)+' mg',false)}
+      <tr><td style="background:#d0d8e4;color:#1e2a35;padding:1.5pt 3pt;font-size:5pt;font-weight:700;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact" colspan="5">Bypass / Off Pump</td></tr>
+      ${pdrowC('Heparin 1000IU/mL','300 IU/kg','不稀釋・直接給予',hepMl,r0(hepIU)+' IU',true)}
+      ${pdrowC('Dormicum 1mg/mL','0.1–0.3 mg/kg','不稀釋',dorLoMl+'–'+dorHiMl,r1(dorLoMg)+'–'+r1(dorHiMg)+' mg',false)}
+      ${pdrowC('Esmeron(Byp) 10mg/mL','1 mg/kg','不稀釋',esBMl,r1(esBMg)+' mg',false)}
+      ${pdrowC('Lasix 10mg/mL','0.5–1 mg/kg','不稀釋',lasLoMl+'–'+lasHiMl,r1(lasLoMg)+'–'+r1(lasHiMg)+' mg',false)}
+      ${pdrowC('2% Xylocaine 20mg/mL','2 mg/kg','不稀釋',xyloMl,r1(xyloMg)+' mg',false)}
+      ${pdrowC('Protamine 10mg/mL','Hep mL × 1','緩慢靜注・監測血壓',r1(protMl),'— mL',true)}
+    </table>`;
+  const printRight=`
+    <div class="psec">Inotropic Drugs　${mult}X・NS ${ns} mL・體重 ${wt} kg</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <colgroup><col style="width:16%"><col style="width:13%"><col style="width:11%"><col style="width:22%"><col style="width:15%"><col style="width:23%"></colgroup>
+      <tr><td style="${thStyle}">藥物</td><td style="${thStyle}">劑量範圍 mcg/kg/min</td><td style="${thStyle}">配製量</td><td style="${thStyle}">抽取步驟</td><td style="${thStyle}">最終濃度</td><td style="${thStyle}">速率對照 mL/hr</td></tr>
+      ${piRowC('Dopamine','3–10',6,40,ns,wt,3,10)}
+      ${piRowC('Dobutrex','2–20',6,12.5,ns,wt,2,20)}
+      ${piRowC('Isoket','0.2–5.0',0.6,1,ns,wt,0.2,5.0)}
+      ${piRowC('Levophed','0.02–0.2',0.06,1,ns,wt,0.02,0.2)}
+      ${piRowC('Primacor','0.25–0.75',0.6,1,ns,wt,0.25,0.75)}
+      ${piRowC('Epinephrine','0.02–0.3',0.06,1,ns,wt,0.02,0.3)}
+    </table>
+    <div class="cvpnote">
+      CVP：&lt;5kg→4Fr　5–10kg→請確認　&gt;10kg→5Fr　|　泡製溶液：NS<br>
+      血壓低→Levophed　心收縮差→Epi/Dobutrex　RV failure/肺高壓→Primacor　Afterload高→Isoket
+    </div>
+    <div class="sigrow">
+      <span>麻醉專科護理師：＿＿＿＿＿＿</span>
+      <span>護理師確認：＿＿＿＿＿＿</span>
+      <span>麻醉醫師：＿＿＿＿＿＿</span>
+    </div>`;
+  const pl=document.getElementById('print-left');
+  const pr=document.getElementById('print-right');
+  if(pl) pl.innerHTML=printLeft;
+  if(pr) pr.innerHTML=printRight;
+}
+function doPrint(mode){
+  const wt=parseFloat(document.getElementById('weight').value);
+  if(isNaN(wt)||wt<=0){alert('請先計算後再列印');return}
+  const lc=document.getElementById('print-left');
+  const rc=document.getElementById('print-right');
+  if(mode==='induction'){ if(rc) rc.style.display='none'; }
+  else if(mode==='inotrope'){ if(lc) lc.style.display='none'; }
+  window.print();
+  if(lc) lc.style.display='';
+  if(rc) rc.style.display='';
+}
+let confirmCb=null;
+function showConfirm(title,body){
+  document.getElementById('ov-title').textContent=title;
+  document.getElementById('ov-body').innerHTML=body;
+  document.getElementById('overlay').style.display='flex';
+}
+function okConfirm(){ document.getElementById('overlay').style.display='none'; }
+function cancelConfirm(){ document.getElementById('overlay').style.display='none'; }
+</script>
+</body>
+</html>
