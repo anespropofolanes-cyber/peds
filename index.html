@@ -943,6 +943,7 @@
                    style="width:60px;">
             <span style="font-size:0.82rem;color:var(--text-sub);flex-shrink:0;">個月</span>
           </div>
+          <div id="ageConsistencyWarn" style="display:none;margin-top:5px;font-size:0.76rem;font-weight:600;color:var(--orange);padding:4px 8px;background:var(--orange-bg);border-radius:5px;border:1px solid #e0a060;"></div>
         </div>
 
         <!-- 體重 -->
@@ -986,6 +987,12 @@
             <option value="urologic">Urologic pediatric surgery</option>
             <option value="other">其他</option>
           </select>
+          <!-- 建議勾選風險提示 -->
+          <div id="autoRiskHint" style="display:none;margin-top:6px;padding:7px 10px;background:var(--yellow-bg);border:1px solid #e0c060;border-radius:7px;font-size:0.78rem;color:var(--yellow);">
+            <span style="font-weight:700;">建議同時勾選：</span>
+            <span id="autoRiskList"></span>
+            <button onclick="applyAutoRisks()" style="margin-left:8px;padding:2px 8px;font-size:0.72rem;font-weight:700;border:1px solid #c0a020;border-radius:5px;background:#f0c030;color:#3a2e00;cursor:pointer;">一鍵套用</button>
+          </div>
         </div>
 
       </div><!-- /form-grid -->
@@ -1397,7 +1404,7 @@ const surgeryProfiles = {
  */
 const emergencyDrugs = [
   { id: "atropine",    name: "Atropine",          unit: "mg",  doseMin: 0.02, doseMax: 0.02, minAbs: 0.1,  maxAbs: 0.5,  defaultConc: 1.0,  concUnit: "mg/mL",  note: "原液 1 mg/mL；min 0.1 mg，避免矛盾性心搏過緩（副交感阻斷）" },
-  { id: "epi_iv",     name: "Epinephrine (IV/IO)", unit: "mg",  doseMin: 0.01, doseMax: 0.01, minAbs: null, maxAbs: 1.0,  defaultConc: 1.0,  concUnit: "mg/mL",  note: "Bosmin 原液 1 mg/mL（1:1,000）。IV 急救須先稀釋至 1:10,000（0.1 mg/mL）再給藥，勿直接推注原液。非電擊節律：開始按壓後 5 min 內給予首劑；電擊節律：2 次去顫後給予。每 3–5 min 重複，最大單次劑量 1 mg。給藥後立即以 NS 3–5 mL 沖管。" },
+  { id: "epi_iv",     name: "Epinephrine (IV/IO)\n稀釋後急救液", unit: "mg",  doseMin: 0.01, doseMax: 0.01, minAbs: null, maxAbs: 1.0,  defaultConc: 0.1,  concUnit: "mg/mL",  note: "此欄預設為稀釋後急救液 0.1 mg/mL（1:10,000）——Bosmin 原液 1 mg/mL（1:1,000）取 1 mL 加 NS 9 mL 即得。勿以原液直接推注 IV。非電擊節律：開始按壓後 5 min 內給予首劑；電擊節律：2 次去顫後。每 3–5 min 重複，最大單次劑量 1 mg。給藥後以 NS 3–5 mL 沖管。" },
   { id: "epi_ett",    name: "Epinephrine (ETT)",  unit: "mg",  doseMin: 0.1,  doseMax: 0.1,  minAbs: null, maxAbs: null, defaultConc: 1.0,  concUnit: "mg/mL",  note: "Bosmin 原液 1 mg/mL（1:1,000）可直接氣管內給藥，效果較 IV 差。優先建立 IV/IO 後改用靜脈途徑。" },
   { id: "amiodarone", name: "Amiodarone",          unit: "mg",  doseMin: 5.0,  doseMax: 5.0,  minAbs: null, maxAbs: 300,  defaultConc: 50,   concUnit: "mg/mL",  note: "適應症：電擊無效 VF/pVT。最多重複 2 次（最大累積劑量 15 mg/kg）。給藥後繼續去顫。與 Lidocaine 擇一使用（2025 AHA：兩者療效相當）。" },
   { id: "lidocaine",  name: "Lidocaine",           unit: "mg",  doseMin: 1.0,  doseMax: 1.0,  minAbs: null, maxAbs: null, defaultConc: 20,   concUnit: "mg/mL",  note: "適應症：電擊無效 VF/pVT，可替代 Amiodarone。2% 原液（20 mg/mL）。維持輸注：20–50 mcg/kg/min。" },
@@ -1549,7 +1556,7 @@ const equipmentDatabase = [
   { item: "Stylet（備用）", priority: false, condition: () => true },
   { item: "Suction（立即可用）", priority: true, condition: () => true },
   { item: "IV line（至少一條，高風險備兩條）", priority: true, condition: () => true },
-  { item: "Fluid warmer", priority: false, condition: (s) => s.riskDehydration || s.riskSepsis || s.riskShock || s.nec || s.gastroschisis },
+  { item: "Fluid warmer", priority: false, condition: (s) => s.riskDehydration || s.riskSepsis || s.riskShock || s.surgery === 'nec' || s.surgery === 'gastroschisis' },
   { item: "Forced-air warmer（Bair Hugger）", priority: false, condition: () => true },
   { item: "體溫監測（Nasopharyngeal / Rectal probe）", priority: true, condition: () => true },
   { item: "小兒血壓袖帶（適合尺寸）", priority: true, condition: () => true },
@@ -1562,7 +1569,7 @@ const equipmentDatabase = [
   { item: "Blood warmer（輸血加溫）", priority: true, condition: (s) => s.riskTransfusion },
   { item: "Emergency drugs tray（Atropine, Epinephrine 已抽好）", priority: true, condition: () => true },
   { item: "Sugammadex（Rocuronium 拮抗）", priority: false, condition: () => true },
-  { item: "Lipid emulsion 20%（局麻藥毒性 LAST 急救）", priority: true, condition: (s) => s.regionalAnesthesia },
+  { item: "Lipid emulsion 20%（局麻藥毒性 LAST 急救）", priority: true, condition: (s) => ['inguinal','urologic','anorectal'].includes(s.surgery) },
   { item: "困難氣道備案（Video laryngoscope / Bronchoscope）", priority: true, condition: (s) => s.riskAirway },
   { item: "PICU / NICU bed 確認", priority: true, condition: (s) => s.riskICU || s.riskSepsis || s.riskShock }
 ];
@@ -1616,6 +1623,8 @@ function readState() {
 function updateAll() {
   readState();
   renderRisk();
+  renderAutoRiskHint();
+  renderAgeConsistencyWarn();
   renderPreop();
   renderInduction();
   renderChecklist();
@@ -2132,9 +2141,10 @@ function renderTransfusion() {
 
   const ebvPerKg = EBV_BY_GROUP[grp] || 75;
   const ebv      = +(ebvPerKg * w).toFixed(0);                         // mL
-  // PRBC 計算：Volume = (Hb_target - Hb_current) / Hct_donor × EBV
-  const prbcVol  = +((hbT - hbC) / (hct / 100) * (ebv / 150)).toFixed(0);
-  // 簡易公式：(Hb差) × 體重 × 3（適用於 Hct 60% PRBC）
+  // 主要公式（納入 Hct）：PRBC (mL) = Hb差 × 體重 × (180 / Hct%)
+  // 推導：180/60 = 3，即 Hct=60% 時等同簡易 ×3 公式
+  const prbcHct  = +((hbT - hbC) * w * (180 / hct)).toFixed(0);
+  // 參考公式（固定 Hct=60%）
   const prbcSimple = +((hbT - hbC) * w * 3).toFixed(0);
   // 最大允許出血量 ABL（相對於目標 Hb_min = hbT 以外的最低可接受值）
   // ABL = EBV × (Hb_initial - Hb_min) / Hb_average
@@ -2158,9 +2168,13 @@ function renderTransfusion() {
   el.innerHTML = `
     <div class="transfusion-grid">
       <div class="transfusion-result">
-        <div class="t-label">PRBC 輸血量（標準公式）</div>
-        <div><span class="t-val">${prbcSimple}</span><span class="t-unit">mL</span></div>
-        <div class="transfusion-note">（Hb差）× 體重 × 3<br>= ${+(hbT-hbC).toFixed(1)} × ${w} × 3</div>
+        <div class="t-label">PRBC 輸血量（依 Hct ${hct}%）</div>
+        <div><span class="t-val">${prbcHct}</span><span class="t-unit">mL</span></div>
+        <div class="transfusion-note">
+          Hb差 × 體重 × (180 ÷ Hct%)<br>
+          = ${+(hbT-hbC).toFixed(1)} × ${w} × ${(180/hct).toFixed(2)}<br>
+          <span style="font-size:0.72rem;opacity:0.8;">參考（Hct=60%）：${prbcSimple} mL</span>
+        </div>
       </div>
       <div class="transfusion-result">
         <div class="t-label">EBV 估計血容量</div>
@@ -2619,6 +2633,83 @@ function toggleCard(cardId) {
   const isHidden = body.classList.contains('hidden');
   body.classList.toggle('hidden', !isHidden);
   header.classList.toggle('collapsed', !isHidden);
+}
+
+// ── Fix 3：手術建議風險提示 ──
+function renderAutoRiskHint() {
+  const surgery = document.getElementById('surgery')?.value;
+  const hint  = document.getElementById('autoRiskHint');
+  const list  = document.getElementById('autoRiskList');
+  if (!hint || !list) return;
+
+  const profile = surgeryProfiles[surgery];
+  const risks   = profile?.autoRisks || [];
+  if (risks.length === 0 || !surgery) {
+    hint.style.display = 'none';
+    return;
+  }
+
+  // 只列出尚未勾選的
+  const unchecked = risks.filter(id => {
+    const el = document.getElementById(id);
+    return el && !el.checked;
+  });
+
+  if (unchecked.length === 0) {
+    hint.style.display = 'none';
+    return;
+  }
+
+  list.textContent = unchecked
+    .map(id => riskFactorConfig[id]?.label || id)
+    .join('、');
+  hint.style.display = 'block';
+}
+
+// 一鍵套用建議風險
+function applyAutoRisks() {
+  const surgery = document.getElementById('surgery')?.value;
+  const profile = surgeryProfiles[surgery];
+  if (!profile) return;
+  profile.autoRisks.forEach(id => {
+    const cb  = document.getElementById(id);
+    const lbl = document.getElementById('lbl-' + id.replace('risk','').toLowerCase());
+    if (cb && !cb.checked) {
+      cb.checked = true;
+      if (lbl) lbl.classList.add('checked');
+    }
+  });
+  document.getElementById('autoRiskHint').style.display = 'none';
+  updateAll();
+}
+
+// ── Fix 4：年齡一致性警告 ──
+const AGE_GROUP_RANGES = {
+  neonate:    { minY: 0,    maxY: 28/365 },
+  infant:     { minY: 1/12, maxY: 1      },
+  toddler:    { minY: 1,    maxY: 3      },
+  preschool:  { minY: 3,    maxY: 6      },
+  school:     { minY: 6,    maxY: 12     },
+  adolescent: { minY: 12,   maxY: 99     },
+};
+
+function renderAgeConsistencyWarn() {
+  const warnEl = document.getElementById('ageConsistencyWarn');
+  if (!warnEl) return;
+  const grp    = state.ageGroup;
+  const ageY   = state.ageYears;
+  if (!grp || !ageY) { warnEl.style.display = 'none'; return; }
+
+  const range = AGE_GROUP_RANGES[grp];
+  if (!range) { warnEl.style.display = 'none'; return; }
+
+  if (ageY < range.minY || ageY > range.maxY + 0.5) {
+    const grpLabel = document.querySelector(`#ageGroup option[value="${grp}"]`)?.textContent || grp;
+    warnEl.textContent = `年齡輸入（${ageY.toFixed(2)} 歲）與選擇的年齡分群「${grpLabel}」不一致，請確認。`;
+    warnEl.style.display = 'block';
+  } else {
+    warnEl.style.display = 'none';
+  }
 }
 
 // checkbox label 樣式同步
