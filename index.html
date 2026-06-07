@@ -323,24 +323,48 @@
     color: var(--accent2);
     border-color: var(--dark);
   }
-  /* 展開內容：跨欄顯示於下一列 */
+  /* 展開內容：黃底框，跨欄顯示於下一列 */
   .drug-note-text {
     margin-top: 0;
-    padding: 10px 12px;
-    background: var(--surface2);
-    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+    background: #fffbe6;
+    border-top: 2px solid #f0c030;
     font-size: 0.82rem;
     line-height: 1.65;
-    color: var(--text-sub);
+    color: var(--text);
   }
+  /* 原始劑量（每公斤）— 放最上面，最醒目 */
+  .drug-original-dose {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    background: #f0c030;
+    color: #3a2e00;
+    font-weight: 800;
+    font-size: 1.05rem;
+    padding: 4px 12px 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    letter-spacing: 0.01em;
+  }
+  .drug-original-dose-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+  /* 計算後總劑量 */
   .drug-note-dose-line {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--dark);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     display: flex;
     align-items: baseline;
     gap: 6px;
+    border-left: 3px solid var(--primary);
+    padding-left: 8px;
   }
   .drug-note-dose-label {
     font-size: 0.72rem;
@@ -348,6 +372,15 @@
     color: var(--text-sub);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+  /* 注意事項文字 */
+  .drug-note-note {
+    font-size: 0.8rem;
+    color: var(--text-sub);
+    border-top: 1px dashed #e0c060;
+    padding-top: 7px;
+    margin-top: 4px;
+    line-height: 1.6;
   }
 
   /* ===== Empty State ===== */
@@ -1536,15 +1569,19 @@ function buildDrugTable(drugs, weight, tableId) {
       ? `${drug.doseMin}`
       : `${drug.doseMin}–${drug.doseMax}`;
 
-    // 展開列：總劑量 + 注意事項，colspan 撐滿整行
+    // 展開列：原始劑量/kg（最醒目）→ 計算總劑量 → 注意事項
     const detailRow = `<tr class="drug-detail-row" id="detail-row-${drug.id}" style="display:none;">
       <td colspan="4" style="padding:0;border-top:none;">
         <div class="drug-note-text">
+          <div class="drug-original-dose">
+            <span class="drug-original-dose-label">原始劑量</span>
+            ${dosePerKg} ${drug.unit}/kg
+          </div>
           <div class="drug-note-dose-line">
-            <span class="drug-note-dose-label">總劑量</span>
+            <span class="drug-note-dose-label">計算總劑量（${weight} kg）</span>
             <span id="dose-${drug.id}">${displayStr}</span>
           </div>
-          <div>${drug.note}</div>
+          <div class="drug-note-note">${drug.note}</div>
         </div>
       </td>
     </tr>`;
